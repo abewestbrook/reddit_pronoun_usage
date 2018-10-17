@@ -1,0 +1,174 @@
+---
+title: "comments_over_time"
+output: html_notebook
+---
+
+
+load data
+```{r}
+library(tidyverse)
+library(bigrquery)
+
+project_id <- "redditcomments-197501" # put your project ID here
+
+
+sql <- "
+#standardSQL
+  WITH pronoun_usage AS (
+  SELECT
+    author,
+    subreddit,
+    created_utc,
+    REGEXP_CONTAINS(body,
+      '(\bI\b)') contains_i,
+    REGEXP_CONTAINS(body,
+      '(?i)me(?-i)') contains_me,
+    REGEXP_CONTAINS(body,
+      '(?i)we(?-i)') contains_we,
+    REGEXP_CONTAINS(body,
+      '\bus\b') contains_us,
+    REGEXP_CONTAINS(body,
+      '(?i)they(?-i)') contains_they,
+    REGEXP_CONTAINS(body,
+      '(?i)I(?-i)') contains_them,
+    body
+  FROM(
+    SELECT
+      *
+    FROM
+      `fh-bigquery.reddit_comments.2016*`)
+    
+  WHERE
+    subreddit = 'The_Donald' ),
+  first_post AS (
+  SELECT
+    author,
+    subreddit,
+    MIN(created_utc) AS first_post_utc
+  FROM
+    pronoun_usage
+  GROUP BY
+    author,
+    subreddit )
+SELECT
+  a.author,
+  a.subreddit,
+  a.created_utc,
+  b.first_post_utc,
+  a.contains_i,
+  a.contains_me,
+  a.contains_we,
+  a.contains_us,
+  a.contains_they,
+  a.contains_them
+FROM
+  pronoun_usage a
+LEFT JOIN
+  first_post b
+ON
+  a.author=b.author
+  AND a.subreddit=b.subreddit
+"
+
+# Execute the query and store the result
+reddit_comments_time <- query_exec(sql, project = project_id, max_pages = Inf, use_legacy_sql = FALSE)
+```
+
+Alternate load from google storage bucket
+```{r}
+library(readr)
+reddit_comments_time <- read_csv("pronoun_usage.csv", progress = FALSE)
+```
+
+```{r}
+library(readr)
+reddit_comments_time <- read_csv("pronoun_usage_2016_v2", progress = FALSE)
+```
+
+Create new variables
+```{r}
+library(tidyverse)
+
+reddit_comments_time <- reddit_comments_time %>%
+  mutate(
+    days_since_fp = (created_utc - first_post_utc)/60/60/24,
+    days_since_jan1 = (created_utc - min(created_utc))/60/60/24
+    )
+```
+
+
+
+```{r}
+reddit_comments_time %>%
+  sample_n(10^6) %>%
+  ggplot(aes()) +
+  geom_smooth(aes(x = days_since_fp, y=contains_i   , color = "FP sing" )) +
+  geom_smooth(aes(x = days_since_fp, y=contains_me  , color = "FP sing" )) +
+  geom_smooth(aes(x = days_since_fp, y=contains_we  , color = "FP plur" )) +
+  geom_smooth(aes(x = days_since_fp, y=contains_us  , color = "FP plur" )) +
+  geom_smooth(aes(x = days_since_fp, y=contains_they, color = "TP plur" )) +
+  geom_smooth(aes(x = days_since_fp, y=contains_them, color = "TP plur" )) 
+  
+
+```
+
+
+
+
+```{r}
+library(tidyverse)
+
+reddit_comments_time %>%
+  mutate(
+    they_num = ifelse(contains_they,1,0)
+         ) %>%
+  ggplot(mapping = aes(days_since_fp, color = contains_they)) + 
+  geom_density(aes())
+
+reddit_comments_time %>%
+  mutate(
+    they_num = ifelse(contains_they,1,0)
+         ) %>%
+  ggplot(mapping = aes(days_since_fp, post_num)) + 
+  #geom_point()+
+  geom_smooth()
+```
+
+
+```{r}
+library(plotly)
+
+  ggplot(reddit_comments_time,aes(post_num))+
+  geom_histogram(binwidth = 1) + 
+    scale_x_continuous(limits = c(0,100)+
+                         scale_y_log10(limits = c(1,10000)))
+
+```
+
+
+```{r}
+reddit_comments_time %>%
+  group_by(author) %>%
+  summarise(total_comments = n()) %>%
+  ggplot()+
+  geom_density(aes(total_comments))+
+  scale_x_continuous(limits = c(0,100))
+
+reddit_comments_time %>%
+  group_by(author) %>%
+  summarise(total_comments = n()) %>%
+  ggplot()+
+  stat_ecdf(aes(total_comments))+
+  scale_x_continuous(limits = c(0,100))
+  
+```
+
+
+```{r}
+reddit_comments_time %>%
+  sample_n(100000)%>%
+  ggplot(aes(days_since_jan1, days_since_fp))+
+    geom_point()+
+  stat_density_2d(aes(fill = ..level..), geom = "polygon")
+```
+
