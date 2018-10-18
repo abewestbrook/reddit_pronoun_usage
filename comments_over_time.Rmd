@@ -74,7 +74,8 @@ ON
 reddit_comments_time <- query_exec(sql, project = project_id, max_pages = Inf, use_legacy_sql = FALSE)
 ```
 
-Alternate load from google storage bucket
+## Alternate load from google storage bucket
+
 ```{r}
 library(readr)
 reddit_comments_time <- read_csv("pronoun_usage.csv", progress = FALSE)
@@ -85,7 +86,8 @@ library(readr)
 reddit_comments_time <- read_csv("pronoun_usage_2016_v2", progress = FALSE)
 ```
 
-Create new variables
+## Create new variables
+
 ```{r}
 library(tidyverse)
 
@@ -112,26 +114,89 @@ reddit_comments_time %>%
 
 ```
 
-
-
+##Rescale variables to same intial usage rates (1)
 
 ```{r}
 library(tidyverse)
+var_offsets <- reddit_comments_time %>%
+  filter(days_since_fp < 15, days_since_fp > 2) %>%
+  summarise(
+    contains_i_offset   = mean(contains_i   ),
+    contains_me_offset  = mean(contains_me  ),
+    contains_we_offset  = mean(contains_we  ),
+    contains_us_offset  = mean(contains_us  ),
+    contains_they_offset= mean(contains_they),
+    contains_them_offset= mean(contains_them)
+  )
+
+
+
 
 reddit_comments_time %>%
   mutate(
-    they_num = ifelse(contains_they,1,0)
-         ) %>%
-  ggplot(mapping = aes(days_since_fp, color = contains_they)) + 
-  geom_density(aes())
+    contains_i    = contains_i   / var_offsets$contains_i_offset,
+    contains_me   = contains_me  / var_offsets$contains_me_offset,
+    contains_we   = contains_we  / var_offsets$contains_we_offset,
+    contains_us   = contains_us  / var_offsets$contains_us_offset,
+    contains_they = contains_they/ var_offsets$contains_they_offset,
+    contains_them = contains_them/ var_offsets$contains_them_offset 
+    ) %>%
+  filter(author %in% committed_authors$author) %>%
+  ggplot(aes()) +
+  geom_smooth(aes(x = days_since_fp, y=contains_i   , color = "I"    )) +
+  geom_smooth(aes(x = days_since_fp, y=contains_me  , color = "Me"   )) +
+  geom_smooth(aes(x = days_since_fp, y=contains_we  , color = "We"   )) +
+  geom_smooth(aes(x = days_since_fp, y=contains_us  , color = "Us"   )) +
+  geom_smooth(aes(x = days_since_fp, y=contains_they, color = "They" )) +
+  geom_smooth(aes(x = days_since_fp, y=contains_them, color = "Them" )) 
+  
+
+```
+
+##Comments over the course of 2016
+# Committed authors (between 50 and 1000 total comments)
+```{r}
+committed_authors <- reddit_comments_time %>%
+  group_by(author) %>%
+  summarise(total_comments = n()) %>%
+  filter(total_comments > 50, total_comments < 1000)
 
 reddit_comments_time %>%
-  mutate(
-    they_num = ifelse(contains_they,1,0)
-         ) %>%
-  ggplot(mapping = aes(days_since_fp, post_num)) + 
-  #geom_point()+
-  geom_smooth()
+filter(author %in% committed_authors$author) %>%
+  ggplot(aes(x = days_since_jan1)) +
+  geom_smooth(aes(y=contains_i   , color = "I"   )) +
+  geom_smooth(aes(y=contains_me  , color = "Me"  )) +
+  geom_smooth(aes(y=contains_we  , color = "We"  )) +
+  geom_smooth(aes(y=contains_us  , color = "Us"  )) +
+  geom_smooth(aes(y=contains_they, color = "They" )) +
+  geom_smooth(aes(y=contains_them, color = "Them" )) 
+```
+
+
+
+##By order of comments (#of posts in the subreddit)
+
+
+```{r}
+reddit_comments_time %>%
+    group_by(author) %>%
+  mutate(post_num = rank(created_utc)) %>%
+  ungroup() %>%
+  #filter(author %in% committed_authors$author) %>%
+  ggplot(aes(x = post_num)) +
+  geom_smooth(aes(y=contains_i   , color = "I"    )) +
+  geom_smooth(aes(y=contains_me  , color = "Me"   )) +
+  geom_smooth(aes(y=contains_we  , color = "We"   )) +
+  geom_smooth(aes(y=contains_us  , color = "Us"   )) +
+  geom_smooth(aes(y=contains_they, color = "They" )) +
+  geom_smooth(aes(y=contains_them, color = "Them" )) 
+```
+
+```{r}
+reddit_comments_time %>%
+  group_by(author) %>%
+  mutate(post_num = rank(created_utc)) %>%
+  head(10)
 ```
 
 
@@ -160,6 +225,20 @@ reddit_comments_time %>%
   ggplot()+
   stat_ecdf(aes(total_comments))+
   scale_x_continuous(limits = c(0,100))
+  
+```
+
+
+
+```{r}
+reddit_comments_time %>%
+  group_by(author) %>%
+  summarise(
+   total_comments =  n()
+  ) %>%
+  filter(total_comments > 1000, total_comments < 100000) 
+#%>%
+ # ggplot() + geom_histogram(aes(total_comments))
   
 ```
 
