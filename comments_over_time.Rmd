@@ -3,6 +3,9 @@ title: "comments_over_time"
 output: html_notebook
 ---
 
+```{r}
+library(tidyverse)
+```
 
 load data
 ```{r}
@@ -118,8 +121,8 @@ reddit_comments_time %>%
 
 ```{r}
 library(tidyverse)
-var_offsets <- reddit_comments_time %>%
-  filter(days_since_fp < 15, days_since_fp > 2) %>%
+var_offsets_time <- reddit_comments_time %>%
+  filter(days_since_fp < 10, days_since_fp > 1) %>%
   summarise(
     contains_i_offset   = mean(contains_i   ),
     contains_me_offset  = mean(contains_me  ),
@@ -130,7 +133,9 @@ var_offsets <- reddit_comments_time %>%
   )
 
 
+```
 
+```{r}
 
 reddit_comments_time %>%
   mutate(
@@ -159,8 +164,10 @@ reddit_comments_time %>%
 committed_authors <- reddit_comments_time %>%
   group_by(author) %>%
   summarise(total_comments = n()) %>%
-  filter(total_comments > 50, total_comments < 1000)
+  filter(total_comments > 5, total_comments < 10000)
 
+```
+```{r}
 reddit_comments_time %>%
 filter(author %in% committed_authors$author) %>%
   ggplot(aes(x = days_since_jan1)) +
@@ -176,21 +183,103 @@ filter(author %in% committed_authors$author) %>%
 
 ##By order of comments (#of posts in the subreddit)
 
-
 ```{r}
-reddit_comments_time %>%
+
+
+var_offsets_order <- reddit_comments_time %>%
+  filter(author %in% committed_authors$author) %>%
     group_by(author) %>%
   mutate(post_num = rank(created_utc)) %>%
   ungroup() %>%
+  filter(post_num < 10) %>%
+  summarise(
+    contains_i_offset   = mean(contains_i   ),
+    contains_me_offset  = mean(contains_me  ),
+    contains_we_offset  = mean(contains_we  ),
+    contains_us_offset  = mean(contains_us  ),
+    contains_they_offset= mean(contains_they),
+    contains_them_offset= mean(contains_them)
+  )
+```
+
+```{r}
+reddit_comments_time %>%
+  filter(author %in% committed_authors$author) %>%
+    group_by(author) %>%
+  mutate(post_num = rank(created_utc)) %>%
+  ungroup() %>%
+  mutate(
+    contains_i    = contains_i   / var_offsets_order$contains_i_offset,
+    contains_me   = contains_me  / var_offsets_order$contains_me_offset,
+    contains_we   = contains_we  / var_offsets_order$contains_we_offset,
+    contains_us   = contains_us  / var_offsets_order$contains_us_offset,
+    contains_they = contains_they/ var_offsets_order$contains_they_offset,
+    contains_them = contains_them/ var_offsets_order$contains_them_offset 
+    ) %>%
+  filter(post_num < 2000) %>%
   #filter(author %in% committed_authors$author) %>%
+  #sample_n(10^6) %>%
   ggplot(aes(x = post_num)) +
   geom_smooth(aes(y=contains_i   , color = "I"    )) +
   geom_smooth(aes(y=contains_me  , color = "Me"   )) +
   geom_smooth(aes(y=contains_we  , color = "We"   )) +
   geom_smooth(aes(y=contains_us  , color = "Us"   )) +
   geom_smooth(aes(y=contains_they, color = "They" )) +
-  geom_smooth(aes(y=contains_them, color = "Them" )) 
+  geom_smooth(aes(y=contains_them, color = "Them" )) +
+  scale_x_log10()
 ```
+
+
+
+
+```{r}
+reddit_comments_time %>%
+  filter(author %in% committed_authors$author) %>%
+    group_by(author) %>%
+  mutate(post_num = rank(created_utc)) %>%
+  ungroup() %>%
+  filter(post_num%%1 == 0) %>%
+  group_by(post_num) %>%
+  summarise(
+    contains_i    = mean(contains_i   ),
+    contains_me   = mean(contains_me  ),
+    contains_we   = mean(contains_we  ),
+    contains_us   = mean(contains_us  ),
+    contains_they = mean(contains_they),
+    contains_them = mean(contains_them),
+    average_use   = mean(contains_i+contains_me+contains_them+contains_we+contains_us+contains_they)/6,
+    num_authors = n()
+  ) %>%
+  filter(post_num < 40) %>%
+  mutate(
+    contains_i    = 100*(contains_i   /(   .$contains_i[1]*.5+   .$contains_i[2]*.25+   .$contains_i[3]*.25 )-1),
+    contains_me   = 100*(contains_me  /(  .$contains_me[1]*.5+  .$contains_me[2]*.25+  .$contains_me[3]*.25 )-1),
+    contains_we   = 100*(contains_we  /(  .$contains_we[1]*.5+  .$contains_we[2]*.25+  .$contains_we[3]*.25 )-1),
+    contains_us   = 100*(contains_us  /(  .$contains_us[1]*.5+  .$contains_us[2]*.25+  .$contains_us[3]*.25 )-1),
+    contains_they = 100*(contains_they/(.$contains_they[1]*.5+.$contains_they[2]*.25+.$contains_they[3]*.25 )-1),
+    contains_them = 100*(contains_them/(.$contains_them[1]*.5+.$contains_them[2]*.25+.$contains_them[3]*.25 )-1),
+    average_use   = 100*(average_use  /(.$average_use[1]*.5+.$average_use[2]*.25+.$average_use[3]*.25 )-1)
+    ) %>%
+  #sample_n(10^6) %>%
+  ggplot(aes(x = post_num)) +
+  geom_point(aes(y=contains_i   , color = "I"    , size = num_authors)) +
+  geom_point(aes(y=contains_me  , color = "Me"   , size = num_authors)) +
+  geom_point(aes(y=contains_we  , color = "We"   , size = num_authors)) +
+  geom_point(aes(y=contains_us  , color = "Us"   , size = num_authors)) +
+  geom_point(aes(y=contains_they, color = "They" , size = num_authors)) +
+  geom_point(aes(y=contains_them, color = "Them" , size = num_authors)) +
+  geom_point(aes(y=average_use  , color = "Average" , size = num_authors)) +
+  geom_smooth(aes(y=contains_i   , color = "I"    )) +
+  geom_smooth(aes(y=contains_me  , color = "Me"   )) +
+  geom_smooth(aes(y=contains_we  , color = "We"   )) +
+  geom_smooth(aes(y=contains_us  , color = "Us"   )) +
+  geom_smooth(aes(y=contains_they, color = "They" )) +
+  geom_smooth(aes(y=contains_them, color = "Them" )) +
+  geom_smooth(aes(y=average_use  , color = "Average" )) +
+  scale_x_continuous(name = "Nth post in given subreddit for every author ") +
+  scale_y_continuous(name = "% change in pronoun use (dots = average across authors)")
+```
+
 
 ```{r}
 reddit_comments_time %>%
@@ -236,7 +325,8 @@ reddit_comments_time %>%
   summarise(
    total_comments =  n()
   ) %>%
-  filter(total_comments > 1000, total_comments < 100000) 
+  filter(total_comments > 1000) %>%
+  arrange(desc(total_comments))
 #%>%
  # ggplot() + geom_histogram(aes(total_comments))
   
