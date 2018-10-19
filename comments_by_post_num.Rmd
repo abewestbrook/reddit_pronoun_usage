@@ -1,0 +1,125 @@
+---
+title: "comments_by_post_num"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+library(bigrquery)
+
+project_id <- "redditcomments-197501" # put your project ID here
+
+
+sql <- "#standardSQL
+WITH
+  pronoun_usage AS (
+  SELECT
+    author,
+    subreddit,
+    ROW_NUMBER() OVER(PARTITION BY author, subreddit ORDER BY created_utc ASC) post_num,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bi\b)') THEN 1
+      ELSE 0
+    END AS contains_i,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bme\b)') THEN 1
+      ELSE 0
+    END AS contains_me,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bwe\b)') THEN 1
+      ELSE 0
+    END AS contains_we,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bus\b)') THEN 1
+      ELSE 0
+    END AS contains_us,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bthey\b)') THEN 1
+      ELSE 0
+    END AS contains_they,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bthem\b)') THEN 1
+      ELSE 0
+    END AS contains_them,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\byou\b)') THEN 1
+      ELSE 0
+    END AS contains_you
+  FROM
+    `fh-bigquery.reddit_comments.20*`
+  WHERE
+     subreddit IN (
+        'The_Donald',
+       'TwoXChromosomes',
+       'GenderCritical',
+       'AskMen',
+       'AskWomen',
+       'AskReddit',
+       'ainbow',
+       'science',
+       'Futurology',
+       'chemicalreactiongifs',
+       'personalfinance',
+       'Jokes',
+       'Showerthoughts',
+       'AskReddit',
+       'news',
+       'funny',
+       'Buddhism',
+       'Anarchism',
+       'vagabond',
+       'Meditation',
+       'awakened',
+       'LateStageCapitalism',
+       'Conservative',
+       'Political_Revolution',
+       'soccer',
+       'Gunners',
+       'AdviceAnimals',
+       'worldnews',
+       'atheism',
+       'exmormon'
+       
+      
+       ) AND
+    author NOT IN ('deleted')),
+  first_post AS (
+  SELECT
+    author,
+    subreddit,
+    COUNT(*) AS total_num_comments
+  FROM
+    pronoun_usage
+  GROUP BY
+    author,
+    subreddit )
+SELECT
+  a.subreddit subreddit,
+  a.post_num post_num,
+  COUNT(b.author) num_authors,
+  AVG(a.contains_i) contains_i,
+  AVG(a.contains_me) contains_me,
+  AVG(a.contains_we) contains_we,
+  AVG(a.contains_us) contains_us,
+  AVG(a.contains_they) contains_they,
+  AVG(a.contains_them) contains_them,
+  AVG(a.contains_you) contains_you
+FROM
+  pronoun_usage a
+LEFT JOIN
+  first_post b
+ON
+  a.author=b.author
+  AND a.subreddit=b.subreddit
+WHERE
+  total_num_comments >= 1
+  AND post_num <= 1000
+GROUP BY
+  post_num,
+  subreddit
+HAVING
+  num_authors > 100
+
+"
+
+# Execute the query and store the result
+reddit_comments_time <- query_exec(sql, project = project_id, max_pages = Inf, use_legacy_sql = FALSE)
