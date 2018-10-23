@@ -388,3 +388,67 @@ plot_pronouns(pronoun_by_post_num,topic_level1)
 
 ```
 
+
+##Pronoun change by initial use rate
+
+```{r}
+n50_pronoun_change <- pronoun_by_post_num %>%
+  filter(num_authors > 20,post_num >40, post_num < 60) %>%
+  group_by(subreddit) %>%
+  summarise(
+    n50_i           = mean(ZNcontains_i   ),
+    n50_me          = mean(ZNcontains_me  ),
+    n50_we          = mean(ZNcontains_we  ),
+    n50_us          = mean(ZNcontains_us  ),
+    n50_they        = mean(ZNcontains_they),
+    n50_them        = mean(ZNcontains_them),
+    n50_you         = mean(ZNcontains_you ),
+    n50_author      = mean(num_authors)
+  )  %>% ungroup()
+n50_pronoun_change  <- pronoun_by_post_num %>%
+  filter(post_num == 50) %>%
+  left_join(n50_pronoun_change, by = c("subreddit"="subreddit"))
+
+library(plotly)
+
+n50_plot_categories = function(n50_pronoun_change,min_authors,offset_i,n50_i,category,pronoun) {
+  ggplotly(
+  ggplot(filter(n50_pronoun_change, n50_author > min_authors) ) +
+  geom_point(aes_(x=offset_i,y=n50_i,color=category)) +
+  geom_smooth(aes_(x=offset_i,y=n50_i,color=category),se=FALSE) +
+  scale_y_continuous(name = paste("Percentage change in the proportion of comments containing", pronoun),limits = c(-50,50)) +
+  scale_x_continuous(name = "Initial proportion of comments containing 'I'",limits = c(0,0.8)) 
+  )
+}
+
+
+n50_plot_categories(n50_pronoun_change,100,"offset_i","n50_i","t1_t2","I")
+
+
+  ggplotly(
+  ggplot(filter(n50_pronoun_change, n50_author > 10) ) +
+  geom_point(aes(x=offset_we,y=n50_we,size=n50_author,color=topic_level1)) +
+  geom_smooth(aes(x=offset_we,y=n50_we,color=topic_level1),se=FALSE) +
+  scale_y_continuous(name = "Percentage change in the proportion of comments containing 'We'",limits = c(-50,50)) +
+  scale_x_continuous(name = "Initial proportion of comments containing 'We'",limits = c(0,.3)) 
+  )
+  
+  ggplotly(
+  ggplot(filter(n50_pronoun_change, n50_author > 10) ) +
+  geom_point(aes(x=offset_us,y=n50_us,size=n50_author,color=topic_level1)) +
+  geom_smooth(aes(x=offset_us,y=n50_us,color=topic_level1),se=FALSE) +
+  scale_y_continuous(name = "Percentage change in the proportion of comments containing 'Us'",limits = c(-50,50)) +
+  scale_x_continuous(name = "Initial proportion of comments containing 'I'",limits = c(0,.15)) 
+  )
+  
+  ggplotly(
+  ggplot(filter(n50_pronoun_change, n50_author > 10) ) +
+  geom_point(aes(x=offset_you,y=n50_you,size=n50_author,color=topic_level1)) +
+  geom_smooth(aes(x=offset_you,y=n50_you,color=topic_level1),se=FALSE) +
+  scale_y_continuous(name = "Percentage change in the proportion of comments containing 'You'",limits = c(-50,50)) +
+  scale_x_continuous(name = "Initial proportion of comments containing 'You'",limits = c(0,.65)) 
+  )
+  
+ 
+```
+
