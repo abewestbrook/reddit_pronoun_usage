@@ -407,17 +407,17 @@ plot_pronouns(pronoun_by_post_num,topic_level1)
 
 ```{r}
 n50_pronoun_change <- pronoun_by_post_num %>%
-  filter(num_authors > 60,post_num >40, post_num < 60) %>%
+  filter(num_authors > 60,post_num >49) %>%
   group_by(subreddit) %>%
   summarise(
-    n50_i           = mean(ZNcontains_i   ),
-    n50_me          = mean(ZNcontains_me  ),
-    n50_we          = mean(ZNcontains_we  ),
-    n50_us          = mean(ZNcontains_us  ),
-    n50_they        = mean(ZNcontains_they),
-    n50_them        = mean(ZNcontains_them),
-    n50_you         = mean(ZNcontains_you ),
-    n50_author      = mean(num_authors)
+    n50_i           = mean(ZNcontains_i   ,na.rm = TRUE),
+    n50_me          = mean(ZNcontains_me  ,na.rm = TRUE),
+    n50_we          = mean(ZNcontains_we  ,na.rm = TRUE),
+    n50_us          = mean(ZNcontains_us  ,na.rm = TRUE),
+    n50_they        = mean(ZNcontains_they,na.rm = TRUE),
+    n50_them        = mean(ZNcontains_them,na.rm = TRUE),
+    n50_you         = mean(ZNcontains_you ,na.rm = TRUE),
+    n50_author      = mean(num_authors    ,na.rm = TRUE)
   )  %>% ungroup()
 n50_pronoun_change  <- pronoun_by_post_num %>%
   filter(post_num == 50) %>%
@@ -475,7 +475,7 @@ plot_pronoun_by_category = function(df,pronoun,category){
 ```{r}
 
 n50_pronoun_change <- pronoun_by_post_num %>%
-  filter(num_authors > 100, post_num == 49) %>%
+  filter(num_authors > 100, post_num > 49) %>%
   group_by(subreddit) %>%
   summarise(
     n50_i           = mean(ZNcontains_i   , na.rm = TRUE),
@@ -510,7 +510,7 @@ agg_n50_pronoun_change  <- pronoun_by_post_num %>%
     agg_offset_they   =  sum(n50_author*offset_they)/agg_n50_author,
     agg_offset_them   =  sum(n50_author*offset_them)/agg_n50_author,
     agg_offset_you    =  sum(n50_author*offset_you )/agg_n50_author
-  ) #%>% filter(grepl("Locations", all_topics)) #########HERE
+  ) %>% filter(grepl("Lifestyle", all_topics)) #########HERE
 
 library(plotly)
 
@@ -530,5 +530,54 @@ plot_pronoun_by_category(agg_n50_pronoun_change,"They",category_level)
 plot_pronoun_by_category(agg_n50_pronoun_change,"Them",category_level)
 plot_pronoun_by_category(agg_n50_pronoun_change,"You" ,category_level)
 ```
+##All post nums (change over time)
+
+```{r}
+library(plotly)
+
+ggplotly(
+ggplot(filter(pronoun_by_post_num,post_num<100)) +
+  geom_smooth(aes(post_num,ZNcontains_i,color=topic_level1), se = FALSE)
+)
+ggplotly(
+ggplot(filter(pronoun_by_post_num,post_num<100)) +
+  geom_smooth(aes(post_num,ZNcontains_we,color=topic_level1), se = FALSE)
+)
+```
+
+##Subreddit Size
+
+```{r}
+n50_pronoun_change %>%
+  #sample_n(5000) %>%
+ggplot(aes(n50_author,n50_i)) +
+  geom_point(aes(size = n50_author,alpha = .001))+
+  geom_smooth()+
+  scale_y_continuous(limits = c(-100,100))+
+  scale_x_log10()
+
+```
+
+##Hypothesis Test of I/We chage
+```{r}
+n50_pronoun_change %>%
+  ggplot()+
+  stat_ecdf(aes(n50_i))+
+  scale_x_continuous(limits = c(-50,50))
+
+
+n50_pronoun_change %>%
+  ggplot()+
+  stat_ecdf(aes(n50_we))+
+  scale_x_continuous(limits = c(-75,150))
+
+n50_pronoun_change %>%
+  filter(n50_i<100,n50_i>-100)%>%
+  ggplot(aes(n50_i,n50_we))+
+  geom_point()+
+  geom_smooth()
+```
+
+
 
 
