@@ -1,0 +1,143 @@
+---
+title: "02_comments_number_analysis"
+output: html_notebook
+---
+#grouped analysis
+```{r}
+library(tidyverse)
+pronoun_by_post_num %>%
+  group_by(post_num, total_num_com_in_sub) %>% 
+  summarise(
+    #agg_author = sum(num_authors),
+    agg_i      = sum(num_authors*contains_i     )/sum(num_authors),
+    agg_me     = sum(num_authors*contains_me    )/sum(num_authors),
+    agg_we     = sum(num_authors*contains_we    )/sum(num_authors),
+    agg_us     = sum(num_authors*contains_us    )/sum(num_authors),
+    agg_they   = sum(num_authors*contains_they  )/sum(num_authors),
+    agg_them   = sum(num_authors*contains_them  )/sum(num_authors),
+    agg_you    = sum(num_authors*contains_you   )/sum(num_authors)
+  ) %>%
+ggplot() +
+  geom_point(aes(post_num,agg_i,color=total_num_com_in_sub))
+  #facet_wrap(~topic_level1)
+```
+##Super Grouped results
+```{r}
+
+all_pronouns <- pronoun_by_post_num %>%
+#filter(post_num > 0, total_num_com_in_sub > 100), 
+mutate(
+  num_til_quit = total_num_com_in_sub - post_num
+)
+
+library(plotly)
+
+ggplotly(
+ggplot(filter(all_pronouns, num_til_quit < 10), aes(post_num,contains_me,group=num_til_quit, color = num_til_quit)) +
+  #geom_point()+
+  geom_smooth(se = FALSE)
+)
+  ggplotly(
+ggplot(filter(all_pronouns,total_num_com_in_sub < 100, num_til_quit > 6, post_num < 100)) +
+  #geom_point(aes(post_num,contains_we,color=total_num_com_in_sub))+
+  geom_smooth(aes(post_num,contains_i,color=total_num_com_in_sub))
+)
+  
+  ggplotly(
+ggplot(filter(all_pronouns,total_num_com_in_sub < 50, post_num < 20)) +
+  #geom_point(aes(post_num,contains_we,color=total_num_com_in_sub))+
+  geom_point(aes(post_num,contains_we,color=total_num_com_in_sub))
+)
+  
+  ggplotly(
+ggplot(filter(all_pronouns,total_num_com_in_sub < 500, post_num < 200)) +
+  #geom_point(aes(post_num,contains_we,color=total_num_com_in_sub))+
+  geom_point(aes(total_num_com_in_sub,contains_we,z = post_num))
+  #geom_smooth(aes(total_num_com_in_sub,contains_we,z = post_num),se = FALSE)
+)
+
+  filter(all_pronouns,total_num_com_in_sub < 500, post_num < 1000) %>%
+  plot_ly(x=.$post_num, z=.$contains_i, y=.$total_num_com_in_sub, type="scatter3d", mode="markers", color = .$contains_we)
+  
+  filter(all_pronouns,total_num_com_in_sub < 500, post_num < 1000, num_til_quit < 300) %>%
+  plot_ly(x=.$post_num, z=.$contains_we, y=.$num_til_quit, type="scatter3d", mode="markers", color = .$contains_we)
+```
+
+
+
+```{r}
+
+
+start_points_all_nums <- all_pronouns %>%
+  filter(post_num  == 1) %>%
+  group_by(total_num_com_in_sub) %>%
+  summarise(
+    offset_i           = mean(contains_i   ),
+    offset_me          = mean(contains_me  ),
+    offset_we          = mean(contains_we  ),
+    offset_us          = mean(contains_us  ),
+    offset_they        = mean(contains_they),
+    offset_them        = mean(contains_them),
+    offset_you         = mean(contains_you ),
+    offset_average_use = mean(contains_i+contains_me+contains_them+contains_we+
+                                contains_us+contains_they+contains_you)/7
+  )
+
+all_pronouns <- all_pronouns %>%
+  left_join(start_points_all_nums, by = c( "total_num_com_in_sub" = "total_num_com_in_sub")) %>%
+  
+      #   !subreddit %in% c("chemicalreactiongifs", "personalfinance")) %>%
+        #  subreddit %in% c("The_Donald", "LateStageCapitalism")
+        #) %>%
+  arrange(sort(post_num)) %>%
+  group_by( total_num_com_in_sub) %>%
+  mutate( 
+    ZNcontains_i    = 100*(contains_i   /(offset_i   )-1),
+    ZNcontains_me   = 100*(contains_me  /(offset_me  )-1),
+    ZNcontains_we   = 100*(contains_we  /(offset_we  )-1),
+    ZNcontains_us   = 100*(contains_us  /(offset_us  )-1),
+    ZNcontains_they = 100*(contains_they/(offset_they)-1),
+    ZNcontains_them = 100*(contains_them/(offset_them)-1),
+    ZNcontains_you  = 100*(contains_you  /(offset_you )-1)
+    ) %>% ungroup()
+
+filter(all_pronouns,total_num_com_in_sub < 500, post_num < 1000, num_til_quit < 300) %>%
+  plot_ly(x=.$post_num, z=.$ZNcontains_we, y=.$total_num_com_in_sub, type="scatter3d", mode="markers", color = .$ZNcontains_we)
+
+
+ggplotly(
+ggplot(filter(all_pronouns,total_num_com_in_sub > 15, total_num_com_in_sub < 100,num_til_quit > 5)) +
+  geom_smooth(aes(post_num,ZNcontains_we,group=total_num_com_in_sub,color = total_num_com_in_sub),se = FALSE)
+)
+
+
+ggplotly(
+ggplot(filter(all_pronouns,total_num_com_in_sub > 15, total_num_com_in_sub < 400,num_til_quit > 5)) +
+  geom_smooth(aes(post_num,ZNcontains_we, color = "We")) +
+  geom_smooth(aes(post_num,ZNcontains_i, color = "I")) +
+geom_smooth(aes(post_num,ZNcontains_us,color = "Us"  ))+
+geom_smooth(aes(post_num,ZNcontains_they,color = "They"))+
+geom_smooth(aes(post_num,ZNcontains_them,color = "Them"))+
+geom_smooth(aes(post_num,ZNcontains_you,color = "You" ))+
+geom_smooth(aes(post_num,ZNcontains_me,color = "Me"  ))
+
+
+
+
+
+
+
+
+  
+)
+
+ggplotly(
+ggplot(filter(all_pronouns,total_num_com_in_sub > 15, total_num_com_in_sub < 400,num_til_quit > 5)) +
+  geom_smooth(aes(post_num,contains_we, color = "We")) +
+  geom_smooth(aes(post_num,contains_i, color = "I")) 
+  
+)
+```
+
+
+

@@ -1,0 +1,94 @@
+---
+title: "03_score_group_analysis"
+output: html_notebook
+---
+## Define Large Subreddits
+
+```{r}
+large_subreddits <- pronoun_use_by_score_group %>%
+  filter(
+    score_group == "z1000+"
+  ) %>% select(subreddit)
+large_subreddits <- large_subreddits[,1,drop = TRUE]
+
+
+```
+
+
+##Density plots of pronoun use
+
+```{r}
+library(plotly)
+
+plot_score_group = function (a,pronoun) {
+  ggplotly(ggplot(a,aes_string(x = paste("contains_",tolower(pronoun),sep=""),color = "score_group")) + geom_density()+
+             facet_wrap(~topic_level1)
+             )}
+
+
+
+
+
+
+large_sub_pronoun_use <- pronoun_use_by_score_group %>%
+  filter(
+    !subreddit %in% large_subreddits
+  ) 
+
+
+plot_score_group(large_sub_pronoun_use,"I") 
+plot_score_group(large_sub_pronoun_use,"We") 
+plot_score_group(large_sub_pronoun_use,"They")
+
+
+```
+
+```{r}
+
+
+
+agg_pronoun_use <- pronoun_use_by_score_group %>%
+  filter(grepl("Sports", all_topics)) %>%
+  group_by(score_group,subreddit,all_topics) %>%
+  summarise(
+    agg_i      = sum(num_comments*ZNcontains_i     )/sum(num_comments),
+    agg_me     = sum(num_comments*ZNcontains_me    )/sum(num_comments),
+    agg_we     = sum(num_comments*ZNcontains_we    )/sum(num_comments),
+    agg_us     = sum(num_comments*ZNcontains_us    )/sum(num_comments),
+    agg_they   = sum(num_comments*ZNcontains_they  )/sum(num_comments),
+    agg_them   = sum(num_comments*ZNcontains_them  )/sum(num_comments),
+    agg_you    = sum(num_comments*ZNcontains_you   )/sum(num_comments),
+    
+    total_comments = sum(num_comments),
+    
+    unweighted_i      =  mean(ZNcontains_i   ),
+    unweighted_me     =  mean(ZNcontains_me  ),
+    unweighted_we     =  mean(ZNcontains_we  ),
+    unweighted_us     =  mean(ZNcontains_us  ),
+    unweighted_they   =  mean(ZNcontains_they),
+    unweighted_them   =  mean(ZNcontains_them),
+    unweighted_you    =  mean(ZNcontains_you )
+            
+    
+  )# %>% arrange(t1_t2) 
+plot_categories_score_groups = function(agg_pronoun_use,pronoun){
+ggplotly(
+  ggplot(agg_pronoun_use, aes_string(x = "score_group", y = paste("agg_",tolower(pronoun),sep=""), name = "subreddit", color = "all_topics")) +
+  geom_point(aes(size = total_comments))
+)
+  }
+
+plot_categories_score_groups(agg_pronoun_use,"I")
+plot_categories_score_groups(agg_pronoun_use,"Me")
+plot_categories_score_groups(agg_pronoun_use,"We")
+plot_categories_score_groups(agg_pronoun_use,"Us")
+plot_categories_score_groups(agg_pronoun_use,"They")
+plot_categories_score_groups(agg_pronoun_use,"Them")
+plot_categories_score_groups(agg_pronoun_use,"You")
+
+
+
+
+
+```
+

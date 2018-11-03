@@ -1,0 +1,198 @@
+---
+title: "01_load_data"
+output: html_notebook
+---
+
+
+##Minimum 5 posts in subreddit
+
+```{r}
+
+library(readr)
+library(tidyverse)
+
+
+pronoun_by_post_num <- read_csv("pronoun_by_post_num.csv") %>%
+  left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit"))
+
+start_points_all_subs <- pronoun_by_post_num %>%
+  filter(post_num  == 1) %>%
+  group_by(subreddit) %>%
+  summarise(
+    offset_i           = mean(contains_i   ),
+    offset_me          = mean(contains_me  ),
+    offset_we          = mean(contains_we  ),
+    offset_us          = mean(contains_us  ),
+    offset_they        = mean(contains_they),
+    offset_them        = mean(contains_them),
+    offset_you         = mean(contains_you ),
+    offset_average_use = mean(contains_i+contains_me+contains_them+contains_we+
+                                contains_us+contains_they+contains_you)/7
+  )
+
+pronoun_by_post_num <- pronoun_by_post_num %>%
+  left_join(start_points_all_subs, by = c("subreddit" = "subreddit")) %>%
+  
+      #   !subreddit %in% c("chemicalreactiongifs", "personalfinance")) %>%
+        #  subreddit %in% c("The_Donald", "LateStageCapitalism")
+        #) %>%
+  arrange(sort(post_num)) %>%
+  group_by(subreddit) %>%
+  mutate( 
+    ZNcontains_i    = 100*(contains_i   /(offset_i   )-1),
+    ZNcontains_me   = 100*(contains_me  /(offset_me  )-1),
+    ZNcontains_we   = 100*(contains_we  /(offset_we  )-1),
+    ZNcontains_us   = 100*(contains_us  /(offset_us  )-1),
+    ZNcontains_they = 100*(contains_they/(offset_they)-1),
+    ZNcontains_them = 100*(contains_them/(offset_them)-1),
+    ZNcontains_you  = 100*(contains_you  /(offset_you )-1),
+    ZNaverage_use   = 100*(((contains_i+contains_me+contains_them+
+                          contains_we+contains_us+contains_they+contains_you)
+                          /7/offset_average_use -1)),
+    
+    all_topics = paste(topic_level1,coalesce(topic_level2,""),coalesce(topic_level3,""),sep="-")
+    
+    )
+```
+
+
+## Minimum 50 post in subreddit
+
+```{r}
+
+library(readr)
+library(tidyverse)
+
+
+pronoun_by_post_num <- read_csv("pronoun_by_post_num_min50.csv") %>%
+  left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit"))
+
+start_points_all_subs <- pronoun_by_post_num %>%
+  filter(post_num  == 1) %>%
+  group_by(subreddit) %>%
+  summarise(
+    offset_i           = mean(contains_i   ),
+    offset_me          = mean(contains_me  ),
+    offset_we          = mean(contains_we  ),
+    offset_us          = mean(contains_us  ),
+    offset_they        = mean(contains_they),
+    offset_them        = mean(contains_them),
+    offset_you         = mean(contains_you ),
+    offset_average_use = mean(contains_i+contains_me+contains_them+contains_we+
+                                contains_us+contains_they+contains_you)/7
+  )
+
+pronoun_by_post_num <- pronoun_by_post_num %>%
+  left_join(start_points_all_subs, by = c("subreddit" = "subreddit")) %>%
+  
+      #   !subreddit %in% c("chemicalreactiongifs", "personalfinance")) %>%
+        #  subreddit %in% c("The_Donald", "LateStageCapitalism")
+        #) %>%
+  arrange(sort(post_num)) %>%
+  group_by(subreddit) %>%
+  mutate( 
+    ZNcontains_i    = 100*(contains_i   /(offset_i   )-1),
+    ZNcontains_me   = 100*(contains_me  /(offset_me  )-1),
+    ZNcontains_we   = 100*(contains_we  /(offset_we  )-1),
+    ZNcontains_us   = 100*(contains_us  /(offset_us  )-1),
+    ZNcontains_they = 100*(contains_they/(offset_they)-1),
+    ZNcontains_them = 100*(contains_them/(offset_them)-1),
+    ZNcontains_you  = 100*(contains_you  /(offset_you )-1),
+    ZNaverage_use   = 100*(((contains_i+contains_me+contains_them+
+                          contains_we+contains_us+contains_they+contains_you)
+                          /7/offset_average_use -1)),
+    
+    all_topics = paste(topic_level1,coalesce(topic_level2,""),coalesce(topic_level3,""),sep="-")
+    
+    )
+```
+
+
+##Grouped by number of posts in subreddit
+
+```{r}
+
+library(readr)
+library(tidyverse)
+
+
+pronoun_by_post_num <- read_csv("pronoun_by_post_num_grouped.csv") %>%
+  left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit"))
+
+start_points_all_subs <- pronoun_by_post_num %>%
+  filter(post_num  == 1) %>%
+  group_by(subreddit,total_num_com_in_sub) %>%
+  summarise(
+    offset_i           = mean(contains_i   ),
+    offset_me          = mean(contains_me  ),
+    offset_we          = mean(contains_we  ),
+    offset_us          = mean(contains_us  ),
+    offset_they        = mean(contains_they),
+    offset_them        = mean(contains_them),
+    offset_you         = mean(contains_you ),
+    offset_average_use = mean(contains_i+contains_me+contains_them+contains_we+
+                                contains_us+contains_they+contains_you)/7
+  )
+
+pronoun_by_post_num <- pronoun_by_post_num %>%
+  left_join(start_points_all_subs, by = c("subreddit" = "subreddit", "total_num_com_in_sub" = "total_num_com_in_sub")) %>%
+  
+      #   !subreddit %in% c("chemicalreactiongifs", "personalfinance")) %>%
+        #  subreddit %in% c("The_Donald", "LateStageCapitalism")
+        #) %>%
+  arrange(sort(post_num)) %>%
+  group_by(subreddit, total_num_com_in_sub) %>%
+  mutate( 
+    ZNcontains_i    = 100*(contains_i   /(offset_i   )-1),
+    ZNcontains_me   = 100*(contains_me  /(offset_me  )-1),
+    ZNcontains_we   = 100*(contains_we  /(offset_we  )-1),
+    ZNcontains_us   = 100*(contains_us  /(offset_us  )-1),
+    ZNcontains_they = 100*(contains_they/(offset_they)-1),
+    ZNcontains_them = 100*(contains_them/(offset_them)-1),
+    ZNcontains_you  = 100*(contains_you  /(offset_you )-1),
+    ZNaverage_use   = 100*(((contains_i+contains_me+contains_them+
+                          contains_we+contains_us+contains_they+contains_you)
+                          /7/offset_average_use -1)),
+    
+    all_topics = paste(topic_level1,coalesce(topic_level2,""),coalesce(topic_level3,""),sep="-")
+    
+    )
+```
+
+#Group by all total_com_num
+
+```{r}
+
+library(tidyverse)
+library(bigrquery)
+
+project_id <- "redditcomments-197501" # put your project ID here
+
+
+sql <- "SELECT 
+total_num_com_in_sub,
+post_num,
+sum(num_authors*contains_i     )/sum(num_authors) AS contains_i   ,
+sum(num_authors*contains_me    )/sum(num_authors) AS contains_me  ,
+sum(num_authors*contains_we    )/sum(num_authors) AS contains_we  ,
+sum(num_authors*contains_us    )/sum(num_authors) AS contains_us  ,
+sum(num_authors*contains_they  )/sum(num_authors) AS contains_they,
+sum(num_authors*contains_them  )/sum(num_authors) AS contains_them,
+sum(num_authors*contains_you   )/sum(num_authors) AS contains_you 
+FROM `redditcomments-197501.authors.pronoun_use_super_group`
+GROUP BY total_num_com_in_sub, post_num
+"
+#sql <- "SELECT * FROM `redditcomments-197501.authors.pronoun_use_all_all_post_num`"
+# Execute the query and store the result
+pronoun_by_post_num <- query_exec(sql, project = project_id, max_pages = Inf, use_legacy_sql = FALSE)
+
+
+```
+
+#Group by score group
+
+```{r}
+library(tidyverse)
+pronoun_use_by_score_group <- read_csv("pronoun_use_by_score_group.csv")
+```
+
