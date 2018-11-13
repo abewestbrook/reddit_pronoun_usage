@@ -192,7 +192,255 @@ pronoun_by_post_num <- query_exec(sql, project = project_id, max_pages = Inf, us
 #Group by score group
 
 ```{r}
+
+score_group_list = c(
+  
+'< 1',
+'1',
+'2-4',
+'5-10',
+'11_25',
+'25_50',
+'50-10',
+'100-500',
+'500-1000',
+'z1000+'
+
+)
+
 library(tidyverse)
-pronoun_use_by_score_group <- read_csv("pronoun_use_by_score_group.csv")
+pronoun_use_by_score_group <- read_csv("pronoun_use_by_score_group.csv",
+    col_types = cols(score_group = col_character())) %>%
+  mutate(
+    score_group = factor(score_group, score_group_list)
+  )  %>%
+  left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit")) %>%
+  mutate(all_topics = paste(topic_level1,coalesce(topic_level2,""),coalesce(topic_level3,""),sep="-"))
+
+start_postions <- pronoun_use_by_score_group %>%
+filter(score_group == "1") %>%
+  select(subreddit, 
+         offset_i    = contains_i   ,
+         offset_me   = contains_me  ,
+         offset_we   = contains_we  ,
+         offset_us   = contains_us  ,
+         offset_they = contains_they,
+         offset_them = contains_them,
+         offset_you  = contains_you )
+
+pronoun_use_by_score_group <- pronoun_use_by_score_group %>%
+  left_join(start_postions, by = c("subreddit" = "subreddit")) %>%
+  filter(
+    offset_i   != 0,
+    offset_me  != 0,
+    offset_we  != 0,
+    offset_us  != 0,
+   offset_they != 0,
+   offset_them != 0,
+    offset_you != 0
+         ) %>%
+  mutate(
+ZNcontains_i    = 100*(contains_i   /(offset_i   )-1),
+ZNcontains_me   = 100*(contains_me  /(offset_me  )-1),
+ZNcontains_we   = 100*(contains_we  /(offset_we  )-1),
+ZNcontains_us   = 100*(contains_us  /(offset_us  )-1),
+ZNcontains_they = 100*(contains_they/(offset_they)-1),
+ZNcontains_them = 100*(contains_them/(offset_them)-1),
+ZNcontains_you  = 100*(contains_you  /(offset_you )-1)
+  )
+
+```
+
+```{r}
+library(bigrquery)
+
+project_id <- "redditcomments-197501" 
+
+sql <- "#standardSQL
+WITH
+
+  pronoun_usage AS (
+  SELECT
+
+    subreddit,
+    created_utc,
+    CASE    
+      WHEN score < 1        THEN '< 1'
+      WHEN score < 2        THEN '1'
+      WHEN score < 5        THEN '2-4'
+      WHEN score < 11       THEN '5-10'
+      WHEN score < 26       THEN '11_25'
+      WHEN score < 51       THEN '25_50'
+      WHEN score < 101      THEN '50-10'
+      WHEN score < 501      THEN '100-500'
+      WHEN score < 1001     THEN '500-1000'
+      WHEN score < 10000000 THEN 'z1000+'
+      ELSE NULL END AS score_group
+      ,
+
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bi\b)') THEN 1
+      ELSE 0
+    END AS contains_i,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bme\b)') THEN 1
+      ELSE 0
+    END AS contains_me,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bwe\b)') THEN 1
+      ELSE 0
+    END AS contains_we,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bus\b)') THEN 1
+      ELSE 0
+    END AS contains_us,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bthey\b)') THEN 1
+      ELSE 0
+    END AS contains_they,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\bthem\b)') THEN 1
+      ELSE 0
+    END AS contains_them,
+    CASE
+      WHEN REGEXP_CONTAINS(LOWER(body), r'(\byou\b)') THEN 1
+      ELSE 0
+    END AS contains_you
+  FROM  
+    `fh-bigquery.reddit_comments.20*`
+      
+      
+
+      WHERE
+  
+  author NOT IN ('deleted')
+    )
+   
+  
+SELECT
+  subreddit,
+  score_group,
+  COUNT(*) num_comments,
+  AVG(created_utc) average_time,
+  AVG(contains_i) contains_i,
+  AVG(contains_me) contains_me,
+  AVG(contains_we) contains_we,
+  AVG(contains_us) contains_us,
+  AVG(contains_they) contains_they,
+  AVG(contains_them) contains_them,
+  AVG(contains_you) contains_you
+FROM
+  pronoun_usage 
+
+GROUP BY
+  score_group,
+  subreddit
+HAVING 
+num_comments > 100
+"
+
+
+pronoun_use_by_score_group <- query_exec(sql, project = project_id, max_pages = Inf, use_legacy_sql = FALSE)
+```
+
+
+
+## Collective pronoun by score
+
+```{r}
+library(tidyverse)
+collective_pronoun_by_score <- read_csv("collective_pronoun_by_score.csv") %>%
+  left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit")) %>%
+  mutate(all_topics = paste(topic_level1,coalesce(topic_level2,""),coalesce(topic_level3,""),sep="-"))
+
+start_postions <- collective_pronoun_by_score %>%
+filter(score == 1) %>%
+  select(subreddit, 
+         offset_col   = collective   ,
+         offset_ind   = individual
+         )
+
+collective_pronoun_by_score <- collective_pronoun_by_score %>%
+  left_join(start_postions, by = c("subreddit" = "subreddit")) %>%
+  filter(
+    offset_col   != 0,
+    offset_ind   != 0
+         ) %>%
+  mutate(
+ZNcollective    = 100*(collective /( offset_col  )-1),
+ZNindividual    = 100*(individual /( offset_ind  )-1)
+
+  )
+
+```
+
+## Collective pronoun by time group
+
+```{r}
+library(tidyverse)
+pronoun_use_time_group_collective <- read_csv("pronoun_use_time_group_collective.csv") %>%
+  mutate(time_block = (time_block - min(time_block))/6) %>%
+  left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit")) %>%
+  mutate(all_topics = paste(topic_level1,coalesce(topic_level2,""),coalesce(topic_level3,""),sep="-"))
+
+```
+
+
+
+Query for above load
+```{r}
+
+library(bigrquery)
+
+project_id <- "redditcomments-197501" 
+
+
+sql <- "#standardSQL
+WITH
+  pronoun_usage AS (
+  SELECT
+    subreddit,
+    ROUND(created_utc/60/60/4) AS time_block,
+
+    CASE
+      WHEN 
+         REGEXP_CONTAINS(LOWER(body), r'(\bi\b)') 
+      OR REGEXP_CONTAINS(LOWER(body), r'(\bmine\b)') 
+      OR REGEXP_CONTAINS(LOWER(body), r'(\bme\b)') 
+      OR REGEXP_CONTAINS(LOWER(body), r'(\bmy\b)') THEN 1
+      ELSE 0
+    END AS individual,
+    
+    CASE
+      WHEN (REGEXP_CONTAINS(LOWER(body), r'(\bwe\b)') 
+      OR REGEXP_CONTAINS(LOWER(body), r'(\bours\b)') 
+      OR REGEXP_CONTAINS(LOWER(body), r'(\bour\b)') 
+      OR (REGEXP_CONTAINS(LOWER(body), r'(\bus\b)') 
+      AND NOT REGEXP_CONTAINS(LOWER(body), r'(\bthe us\b)'))) THEN 1
+      ELSE 0
+    END AS collective
+  FROM
+    `fh-bigquery.reddit_comments.2016*`
+  WHERE
+    author NOT IN ('deleted')
+    AND subreddit IN (SELECT subreddit FROM `redditcomments-197501.authors.subreddit_categories_combined` WHERE topic_level1 = 'News and Politics')
+    )
+SELECT
+  subreddit,
+  (time_block) AS time_block,
+  COUNT(*) num_comments,
+  
+  AVG(collective) collective,
+  AVG(individual) individual
+FROM
+  pronoun_usage
+GROUP BY
+  subreddit,
+  time_block
+HAVING
+  num_comments > 10"
+
+
+pronoun_use_by_time_group <- query_exec(sql, project = project_id, max_pages = Inf, use_legacy_sql = FALSE)
 ```
 
