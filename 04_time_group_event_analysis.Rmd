@@ -1,0 +1,53 @@
+---
+title: "04_time_group_event_analysis"
+output: html_notebook
+---
+
+```{r}
+library(plotly)
+
+ggplotly(
+  
+  ggplot(filter(pronoun_use_time_group_collective, num_comments > 1500), 
+         aes(x=time_block,y=collective,name=subreddit,color=all_topics, size = num_comments)) +
+    geom_point() + geom_smooth() +  geom_vline(xintercept  = 316)
+  
+)
+```
+
+
+```{r}
+
+category_aggs <- pronoun_use_time_group_collective %>%
+  mutate(day = round(time_block)) %>%
+  group_by(day,topic_level2) %>%
+  summarise(
+    num_comments_day = sum(num_comments),
+    collective = sum(collective*num_comments)/num_comments_day
+  ) 
+
+category_aggs %>%
+  group_by(agg_name)
+
+
+category_aggs %>%
+  ggplot(aes(x=day,y=collective))+#,size = num_comments_day, color = topic_level2)) +
+  geom_point() + geom_smooth() + geom_vline(xintercept  = 316) + facet_wrap(~topic_level2) +
+  scale_y_continuous(limits = c(0.05,0.3))
+  
+
+
+```
+
+Create offsets to normalize use rates
+```{r}
+
+pronoun_use_time_group_collective <- pronoun_use_time_group_collective 
+ggplotly(
+  ggplot(filter(pronoun_use_time_group_collective, subreddit %in% c("The_Donald","hillaryclinton")) ,
+         aes(x=time_block,y=ZNcollective, color = subreddit))+#,size = num_comments_day, color = topic_level2)) +
+  geom_point() + geom_smooth() + geom_vline(xintercept  = 316) +
+  scale_y_continuous(limits = c(-50,200))
+)
+```
+
