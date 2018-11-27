@@ -1,0 +1,19 @@
+---
+title: "05_group_similarity_analysis"
+output: html_notebook
+---
+
+#Typical The_Donald author posting distribution (weighted)
+
+```{r}
+donald_tfidf %>%
+  group_by(category) %>%
+  summarise(
+    non_tf = mean(tf),
+    tf = sum(posts_in_donald*tf)/sum(posts_in_donald),
+    adj_tf = sum(sqrt(posts_in_donald)*tf)/sum(sqrt(posts_in_donald)),
+    tfidf = sum(posts_in_donald*tfidf)/sum(posts_in_donald)
+    
+  ) %>% arrange(desc(tf))
+```
+

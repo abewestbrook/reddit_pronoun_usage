@@ -381,7 +381,21 @@ library(tidyverse)
 pronoun_use_time_group_collective <- read_csv("pronoun_use_time_group_collective.csv") %>%
   mutate(time_block = (time_block - min(time_block))/6) %>%
   left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit")) %>%
-  mutate(all_topics = paste(topic_level1,coalesce(topic_level2,""),coalesce(topic_level3,""),sep="-"))
+  mutate(all_topics = paste(topic_level1,coalesce(topic_level2,""),coalesce(topic_level3,""),sep="-")) 
+
+
+
+pronoun_use_time_group_collective <- pronoun_use_time_group_collective%>%
+  group_by(subreddit) %>%
+  summarise(
+    offset_col  = mean(collective),
+    offset_ind  = mean(individual)
+  ) %>% left_join(pronoun_use_time_group_collective, . , by = c("subreddit" = "subreddit")) %>%
+  mutate(
+    
+    ZNcollective    = 100*(collective /( offset_col  )-1),
+    ZNindividual    = 100*(individual /( offset_ind  )-1)
+  )
 
 ```
 
@@ -442,5 +456,13 @@ HAVING
 
 
 pronoun_use_by_time_group <- query_exec(sql, project = project_id, max_pages = Inf, use_legacy_sql = FALSE)
+```
+
+## The_Donald TFIDF
+
+```{r}
+library(tidyverse)
+donald_tfidf <- read_csv("donald_tfidf.csv") %>%
+  left_join(read_csv("author_list_donald.csv"), by = c("author" = "author"))
 ```
 
