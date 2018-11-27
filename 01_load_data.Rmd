@@ -458,11 +458,33 @@ HAVING
 pronoun_use_by_time_group <- query_exec(sql, project = project_id, max_pages = Inf, use_legacy_sql = FALSE)
 ```
 
-## The_Donald TFIDF
+## The_Donald TFIDF of T_D's authors subreddit categories
 
 ```{r}
 library(tidyverse)
 donald_tfidf <- read_csv("donald_tfidf.csv") %>%
   left_join(read_csv("author_list_donald.csv"), by = c("author" = "author"))
+```
+## Author list of posts in The_Donald
++ domain + score
+
+```{r}
+library(tidyverse)
+posts_in_donald <- read_csv("posts_in_donald.csv") %>% filter(num_comments > 0)
+```
+## Pronoun Use by authors in T_D
+
+```{r}
+pronoun_use_donald_authors <- read_csv("pronoun_use_donald_authors.csv")
+```
+## Pronoun use aggregated by post id
+
+```{r}
+pronoun_use_by_donald_posts <- read_csv("pronoun_use_by_donald_posts.csv")
+```
+## Pronoun use aggregated by post id ONLY TOP LEVEL COMMENTS
+
+```{r}
+pronoun_use_by_donald_posts <- read_csv("pronoun_use_by_donald_posts_top_level.csv")
 ```
 
