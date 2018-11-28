@@ -7,18 +7,23 @@ output: html_notebook
 
 pronoun_use_post <- pronoun_use_by_donald_posts %>%
   mutate(id = str_sub(link_id,start = -6)) %>%
-  left_join(filter(posts_in_donald, num_comments > 10),.,by = c("id" = "id")) %>%
+  left_join(filter(posts_in_donald, num_comments > 9),by = c("id" = "id")) %>%
   transmute(
-            num_comments=num_comments.y,
+            num_comments=num_comments.x,
             collective=collective,
+            individual=individual,
             contains_we = contains_we,
             title=title,
             selftext=selftext,
+            domain=domain,
             selfpost=ifelse(is.na(selftext),"Not Self Post", "Self Post"),
             score=score,
             created_utc = created_utc,
             date = as.POSIXct(created_utc,tz="", origin="1970-01-01")
-            )
+            ) %>% filter(#!is.na(collective),
+                         num_comments > 10)
+
+colSums(is.na(pronoun_use_post))
 
 ```
 
@@ -27,7 +32,7 @@ Most and least collective posts
 ```{r}
 pronoun_use_post %>%
   filter(num_comments > 500) %>%
-  arrange(desc(collective)) #%>% head(100)
+  arrange((collective)) #%>% head(100)
 ```
 
 ```{r}
@@ -40,12 +45,12 @@ pronoun_use_post %>%
 ```{r}
 pronoun_use_post %>%
   filter(num_comments > 100) %>%
-  mutate(contains_word = ifelse(grepl("",tolower(title)),"yes","no")) %>%
+  mutate(contains_word = ifelse(grepl("the_d",tolower(title)),"yes","no")) %>%
 mutate(self_post = ifelse(is.na(selftext),"no","yes")) %>%
   group_by(contains_word) %>%
   summarise(
-    collective =  mean(collective),
     collective_weighted = sum(num_comments*collective)/sum(num_comments),
+    collective =  mean(collective),
     num_posts  = n(),
     total_comments = sum(num_comments)
   )
@@ -62,7 +67,7 @@ mutate(self_post = ifelse(is.na(selftext),"no","yes")) %>%
 library(plotly)
 
 ggplotly(
-  ggplot(filter(pronoun_use_post,num_comments >350) ,aes(date,collective,size = num_comments, name = title, color = selfpost))+
+  ggplot(filter(pronoun_use_post,num_comments >150) ,aes(date,collective,size = num_comments, name = title, color = selfpost))+
   geom_point()
 )
 ```

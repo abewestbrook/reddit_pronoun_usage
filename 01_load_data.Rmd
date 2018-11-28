@@ -488,3 +488,23 @@ pronoun_use_by_donald_posts <- read_csv("pronoun_use_by_donald_posts.csv")
 pronoun_use_by_donald_posts <- read_csv("pronoun_use_by_donald_posts_top_level.csv")
 ```
 
+
+## "" POPULAR COMMENTS ONLY (SCORE 10+)
+
+```{r}
+pronoun_use_by_donald_posts <- read_csv("pronoun_use_by_donald_posts_popular.csv")
+
+
+```
+
+```{r}
+library(bigrquery)
+
+project_id <- "redditcomments-197501" 
+
+sql <- "SELECT * FROM `redditcomments-197501.authors.pronoun_use_by_donald_posts_popular`"
+pronoun_use_by_donald_posts <- query_exec(sql, project = project_id, max_pages = Inf, use_legacy_sql = FALSE)
+
+
+```
+
