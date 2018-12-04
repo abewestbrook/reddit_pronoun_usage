@@ -21,7 +21,7 @@ pronoun_use_post <- pronoun_use_by_donald_posts %>%
             created_utc = created_utc,
             date = as.POSIXct(created_utc,tz="", origin="1970-01-01")
             ) %>% filter(#!is.na(collective),
-                         num_comments > 10)
+                         num_comments > 500)
 
 colSums(is.na(pronoun_use_post))
 
@@ -41,11 +41,25 @@ pronoun_use_post %>%
   ggplot()+
   geom_density(aes(collective))
 ```
+
+##POT8
 ##Particular words in the title of the post
 ```{r}
 pronoun_use_post %>%
   filter(num_comments > 100) %>%
-  mutate(contains_word = ifelse(grepl("the_d",tolower(title)),"yes","no")) %>%
+  mutate(contains_word = 
+        ifelse(
+      grepl("TD", (title)) | 
+      grepl("t_d", tolower(title)) | 
+      grepl("the_donald", tolower(title)) 
+      #grepl("censor", tolower(title)) |
+      #grepl("environment", tolower(title)) |
+      #grepl("ice", tolower(title)) |
+      #grepl("", tolower(title)) 
+      ,"climate related", "unrelated"
+  
+                                
+                                )) %>%
 mutate(self_post = ifelse(is.na(selftext),"no","yes")) %>%
   group_by(contains_word) %>%
   summarise(
@@ -72,4 +86,214 @@ ggplotly(
 )
 ```
 
+
+## ALL POLITICAL SUBREDDITS
+
+```{r}
+pronoun_use_post <- pronoun_use_by_political_posts %>%
+  mutate(id = str_sub(link_id,start = -6)) %>%
+  left_join(filter(posts_in_political_subs, num_comments > 9),by = c("id" = "id", "subreddit" = "subreddit") )%>%
+  transmute(subreddit = subreddit,
+            num_comments=num_comments.x,
+            collective=collective,
+            individual=individual,
+            col_min_ind = contains_we - individual,
+            contains_we = contains_we,
+            title=title,
+            full_title = paste(subreddit,title, sep=": "),
+            selftext=selftext,
+            domain=domain,
+            selfpost=ifelse(is.na(selftext),"Not Self Post", "Self Post"),
+            score=score,
+            created_utc = created_utc,
+            date = as.POSIXct(created_utc,tz="", origin="1970-01-01"),
+            climate_change = ifelse(
+    grepl("climate", tolower(title)) | 
+      grepl("temperature", tolower(title)) | 
+      #grepl("pollution", tolower(title)) | 
+      grepl("warming", tolower(title)) |
+      grepl("environment", tolower(title)) |
+      #grepl("ice", tolower(title)) |
+      grepl("environment", tolower(title)) 
+      ,"climate related", "unrelated"
+  ),
+  threat = ifelse(
+    grepl("threat", tolower(title)) | 
+      grepl("extinct", tolower(title)) | 
+      grepl("warns", tolower(title)) 
+      ,"threat related", "unrelated"
+  ),
+  aliens = ifelse(
+    grepl("alien", tolower(title))
+      
+      ,"alien related", "unrelated"
+  ),
+  any_of_three = ifelse(
+     climate_change == "climate related"| 
+      threat == "threat related" |
+      aliens == "alien related"
+      ,"any of 3 related", "unrelated"
+  )
+            ) %>% filter(#!is.na(collective),
+                         num_comments > 50) %>%
+  left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit"))
+
+colSums(is.na(pronoun_use_post))
+
+```
+
+```{r}
+library(plotly)
+ggplotly(
+  ggplot(filter(pronoun_use_post,num_comments >500, subreddit == "The_Donald") ,aes(date,collective,size = num_comments, name = full_title, color = climate_change))+
+  geom_point()
+)
+```
+```{r}
+filter(pronoun_use_post,num_comments >500, subreddit == "worldnews") %>% 
+  mutate(climate_change = ifelse(
+    grepl("climate", tolower(title)) | 
+      grepl("temperature", tolower(title)) | 
+      #grepl("pollution", tolower(title)) | 
+      grepl("warming", tolower(title)) |
+      grepl("environment", tolower(title)) 
+      ,"climate related", "unrelated"
+  )
+    ) %>%
+  arrange(desc(col_min_ind)) %>% head(50)
+```
+
+```{r}
+worldnews_posts <- read_delim("worldnews_environmental_posts - worldnews_posts.tsv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE) %>%
+  mutate(threat_score = case_when(
+    threat_score == "e" ~ "Environmental Related",
+    threat_score == "a" ~ "Alien/Space travel Related",
+    TRUE ~ "Other"
+    
+  ))  %>% filter(!is.na(title))
+```
+##POT 7
+```{r}
+library(plotly)
+#ggplotly(
+  ggplot(worldnews_posts ,aes(date,collective,size = num_comments, name = full_title, color = threat_score))+
+  geom_point()+
+    theme_classic()+
+    scale_y_continuous()
+                  
+#)
+
+
+worldnews_posts %>% group_by(threat_score) %>% summarise(
+  number_of_posts = n(),
+  avg_collective = mean(collective),
+  avg_individual = mean(individual)
+)
+ggplot(worldnews_posts ,aes(threat_score,collective,size = num_comments))+ geom_boxplot() + geom_jitter(alpha = 0.1) + theme_classic()
+ggplot(worldnews_posts ,aes(threat_score,individual,size = num_comments))+ geom_boxplot()
+
+
+
+#worldnews_posts %>% filter(threat_score == "Environmental Related") %>% arrange(desc(collective)) %>% select(collective,title, num_comments, individual,contains_we,date) %>% write_csv("worldnews_environment2.csv")
+```
+
+
+```{r}
+threat_levels <- c("Person/Place/Business",
+               
+                   "Country",
+                   "Reigonal",
+                   "Global"
+
+
+)
+
+threat_levels2 <- c("All Other",
+                    "All Environmental Resolutions",
+                    "Person/Place/Business",
+                   "Country",
+                   "Reigonal",
+                   "Global",
+                   "Inside Solar System",
+                   "Outside Solar System"
+
+
+)
+
+worldnews_environment_threat_level <- read_delim("worldnews_environment2_threat_level.tsv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE) %>% mutate(threat_level = case_when(
+    threat_level == "e" ~ "Global",
+    threat_level == "c" ~ "Country",
+    threat_level == "b" |
+    threat_level == "s" ~ "Person/Place/Business",
+    threat_level == "r" ~ "Reigonal",
+    TRUE ~ "Other"),
+    problem = case_when(
+                        problem == "n" ~ "Resolution",
+                        TRUE ~ "Threat"),
+                   
+    threat_level = factor(threat_level,threat_levels))
+
+ggplot(worldnews_environment_threat_level,
+       aes(threat_level,collective,size = num_comments))+ geom_boxplot() + geom_jitter(width=.2,alpha = 0.5) + theme_classic() + facet_wrap(~problem) +
+  labs(title = "Collective Pronoun Use by Threat Status and Scale in posts from /r/worldnews",
+       subtitle = "all posts from 2016 with at least 500 comments, each circle represents a post scaled by number of comments",
+       caption = "") + xlab("")
+
+#ggplot(worldnews_environment_threat_level,
+#       aes(problem,contains_we,size = num_comments))+ geom_boxplot() + geom_jitter(width=.2,alpha = 0.5) + #theme_classic() + facet_grid(~threat_level)
+
+worldnews_environment_threat_level %>%
+  group_by(problem,threat_level) %>%
+  summarise(
+    total_comments = sum(num_comments),
+    collective_avg = sum(collective*num_comments)/total_comments,
+    individual_avg = sum(individual*num_comments)/total_comments,
+    col_min =collective_avg + sqrt(collective_avg*(1-collective_avg)/total_comments),
+    col_max =collective_avg - sqrt(collective_avg*(1-collective_avg)/total_comments)
+  )
+
+ggplot(worldnews_environment_threat_level,
+       aes(num_comments,collective))+ geom_point() + scale_x_log10()
+
+worldnews_graphs <- worldnews_environment_threat_level %>% 
+  #filter(problem == "problem") %>% 
+  select(title, threat_level, problem) %>%
+  left_join(worldnews_posts,., by = c("title" = "title")) %>% 
+  mutate(threat_level = case_when(
+    problem == "Resolution" ~ "All Environmental Resolutions",
+    !is.na(threat_level) ~ as.character(threat_level),
+     star_system == "o" ~  "Outside Solar System",
+    star_system == "i" ~  "Inside Solar System",
+               TRUE~"All Other"
+                                  ), 
+         threat_level = factor(threat_level,threat_levels2)) 
+ 
+  ggplot(worldnews_graphs,
+       aes(threat_level,collective, size = num_comments))+ geom_boxplot(outlier.alpha = 0) + 
+  geom_jitter(width=.25,alpha = 0.2) + 
+  theme_classic() + labs(title = "Collective Pronoun Use in Posts from /r/worldnews by Scale of Threat/Resolution",
+       subtitle = "all posts from 2016 with at least 500 comments, each circle represents a post scaled by number of comments",
+       caption = "") + xlab("Threat Scale") + ylab("Proportion of comments with collective pronouns")
+  
+    ggplot(worldnews_graphs,
+       aes(threat_level,individual, size = num_comments))+ geom_boxplot(outlier.alpha = 0) + 
+  geom_jitter(width=.25,alpha = 0.2) + 
+  theme_classic() + labs(title = "Individual Pronoun Use in Posts from /r/worldnews by Scale of Threat/Resolution",
+       subtitle = "all posts from 2016 with at least 500 comments, each circle represents a post scaled by number of comments",
+       caption = "") + xlab("Threat Scale") + ylab("Proportion of comments with individual pronouns")
+
+  library(RColorBrewer)
+    ggplot(worldnews_graphs ,aes(date,collective,size = num_comments, name = full_title, color = threat_level))+
+  geom_point()+
+    theme_classic()+
+    scale_y_continuous()+
+       scale_color_brewer(palette="Paired")
+    
+               
+  
+worldnews_graphs %>%
+  filter(threat_level == "All Other") %>% head(50)
+```
 

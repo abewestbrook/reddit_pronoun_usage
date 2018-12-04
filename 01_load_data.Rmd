@@ -507,4 +507,22 @@ pronoun_use_by_donald_posts <- query_exec(sql, project = project_id, max_pages =
 
 
 ```
+## "" All political subreddits, 2016
+
+```{r}
+library(tidyverse)
+posts_in_political_subs <- read_csv("posts_in_political_subs.csv")
+```
+```{r}
+pronoun_use_by_political_posts <- read_csv("pronoun_use_by_political_posts.csv", 
+    col_types = cols(collective = col_double(), 
+        contains_we = col_double()))
+```
+
+
+## Subreddit Categories
+```{r}
+subreddit_categories <- read_csv("subreddit_categories.csv")
+```
+
 
