@@ -162,7 +162,41 @@ filter(pronoun_use_post,num_comments >500, subreddit == "worldnews") %>%
     ) %>%
   arrange(desc(col_min_ind)) %>% head(50)
 ```
+## worldnews
 
+## ALL POLITICAL SUBREDDITS
+
+```{r}
+pronoun_use_post <- pronoun_use_by_worldnews2016_posts %>%
+  mutate(id = str_sub(link_id,start = -6)) %>%
+  left_join(filter(posts_in_political_subs, subreddit == "worldnews"),by = c("id" = "id" ))%>%
+  transmute(subreddit = subreddit,
+            num_comments=num_comments.x,
+            collective = collective,
+            score = score.x,
+            
+            
+           
+            title=title,
+            
+            selftext=selftext,
+            domain=domain,
+            selfpost=ifelse(is.na(selftext),"Not Self Post", "Self Post"),
+            
+            created_utc = created_utc,
+            date = as.POSIXct(created_utc,tz="", origin="1970-01-01")) %>% 
+            filter(#!is.na(collective),
+                         num_comments > 50) %>%
+  left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit"))
+
+colSums(is.na(pronoun_use_post))
+
+```
+
+
+
+
+## reg worldnews
 ```{r}
 worldnews_posts <- read_delim("worldnews_environmental_posts - worldnews_posts.tsv", 
     "\t", escape_double = FALSE, trim_ws = TRUE) %>%
@@ -190,8 +224,12 @@ worldnews_posts %>% group_by(threat_score) %>% summarise(
   avg_collective = mean(collective),
   avg_individual = mean(individual)
 )
-ggplot(worldnews_posts ,aes(threat_score,collective,size = num_comments))+ geom_boxplot() + geom_jitter(alpha = 0.1) + theme_classic()
-ggplot(worldnews_posts ,aes(threat_score,individual,size = num_comments))+ geom_boxplot()
+ggplot(mutate(worldnews_posts,col_pct = 100*collective) ,aes(threat_score,col_pct,size = num_comments))+ geom_boxplot() + geom_jitter(alpha = 0.1) + theme_classic(base_size = 16)+
+       labs(title = "Collective Pronoun Use by Topic in posts from /r/worldnews",
+       subtitle = "All posts from 2016 with at least 500 comments, each circle represents a post scaled by number of comments",
+       caption = "") + xlab("")+ ylab("Percentage of Comments which contains Collective Pronouns") 
+       
+ggplot(worldnews_posts ,aes(threat_score,individual,size = num_comments))+ geom_boxplot() 
 
 
 
@@ -233,14 +271,14 @@ worldnews_environment_threat_level <- read_delim("worldnews_environment2_threat_
                         problem == "n" ~ "Resolution",
                         TRUE ~ "Threat"),
                    
-    threat_level = factor(threat_level,threat_levels))
+    threat_level = factor(threat_level,threat_levels),
+    col_pct=collective*100)
 
 ggplot(worldnews_environment_threat_level,
-       aes(threat_level,collective,size = num_comments))+ geom_boxplot() + geom_jitter(width=.2,alpha = 0.5) + theme_classic() + facet_wrap(~problem) +
+       aes(threat_level,col_pct,size = num_comments))+ geom_boxplot() + geom_jitter(width=.2,alpha = 0.5) + theme_classic(base_size = 16) + facet_wrap(~problem) +
   labs(title = "Collective Pronoun Use by Threat Status and Scale in posts from /r/worldnews",
        subtitle = "all posts from 2016 with at least 500 comments, each circle represents a post scaled by number of comments",
-       caption = "") + xlab("")
-
+       caption = "") + xlab("Scale of Environmental Threat/Resolution") + ylab("Percentage of Comments which contains Collective Pronouns") 
 #ggplot(worldnews_environment_threat_level,
 #       aes(problem,contains_we,size = num_comments))+ geom_boxplot() + geom_jitter(width=.2,alpha = 0.5) + #theme_classic() + facet_grid(~threat_level)
 
@@ -268,32 +306,148 @@ worldnews_graphs <- worldnews_environment_threat_level %>%
     star_system == "i" ~  "Inside Solar System",
                TRUE~"All Other"
                                   ), 
-         threat_level = factor(threat_level,threat_levels2)) 
+         threat_level = factor(threat_level,threat_levels2),
+    col_pct = collective*100) 
  
   ggplot(worldnews_graphs,
-       aes(threat_level,collective, size = num_comments))+ geom_boxplot(outlier.alpha = 0) + 
+       aes(threat_level,col_pct, size = num_comments))+ geom_boxplot(outlier.alpha = 0) + 
   geom_jitter(width=.25,alpha = 0.2) + 
-  theme_classic() + labs(title = "Collective Pronoun Use in Posts from /r/worldnews by Scale of Threat/Resolution",
+  theme_classic(base_size = 16) + labs(title = "Collective Pronoun Use in Posts from /r/worldnews by Scale of Threat/Resolution",
        subtitle = "all posts from 2016 with at least 500 comments, each circle represents a post scaled by number of comments",
-       caption = "") + xlab("Threat Scale") + ylab("Proportion of comments with collective pronouns")
+       caption = "") + xlab("") + ylab("Percentage of Comments which contains Collective Pronouns") +theme(axis.text=element_text(size=8))
   
     ggplot(worldnews_graphs,
        aes(threat_level,individual, size = num_comments))+ geom_boxplot(outlier.alpha = 0) + 
   geom_jitter(width=.25,alpha = 0.2) + 
-  theme_classic() + labs(title = "Individual Pronoun Use in Posts from /r/worldnews by Scale of Threat/Resolution",
+  theme_classic(base_size = 16) + labs(title = "Individual Pronoun Use in Posts from /r/worldnews by Scale of Threat/Resolution",
        subtitle = "all posts from 2016 with at least 500 comments, each circle represents a post scaled by number of comments",
-       caption = "") + xlab("Threat Scale") + ylab("Proportion of comments with individual pronouns")
+       caption = "") + xlab("Threat Scale") + ylab("Proportion of comments with individual pronouns")+theme(axis.text=element_text(size=8))
 
   library(RColorBrewer)
-    ggplot(worldnews_graphs ,aes(date,collective,size = num_comments, name = full_title, color = threat_level))+
+    ggplot(worldnews_graphs ,aes(date,col_pct,size = num_comments, name = full_title, color = threat_level))+
   geom_point()+
     theme_classic()+
     scale_y_continuous()+
-       scale_color_brewer(palette="Paired")
+       scale_color_brewer(palette="Paired")+theme_classic(base_size = 16) + labs(title = "Collective Pronoun Use in Posts from /r/worldnews by Date",
+       subtitle = "all posts from 2016 with at least 500 comments, each circle represents a post scaled by number of comments",
+       caption = "") + xlab("Date") + ylab("Percentage of Comments which contain Collective Pronouns")
     
                
   
 worldnews_graphs %>%
   filter(threat_level == "All Other") %>% head(50)
 ```
+
+##Hyp test
+```{r}
+pop_sd_col <- sd(worldnews_graphs$collective)
+pop_mu_col <- mean(worldnews_graphs$collective)
+
+pop_sd_ind <- sd(worldnews_graphs$individual)
+pop_mu_ind <- mean(worldnews_graphs$individual)
+
+worldnews_graphs %>% group_by(threat_level) %>% summarise(
+  N = n(),
+  collective_avg = mean(collective),
+  individual_avg = mean(individual),
+  
+  t_score_col = (collective_avg - pop_mu_col)*sqrt(N)/pop_sd_col,
+  t_score_ind = (individual_avg - pop_mu_ind)*sqrt(N)/pop_sd_ind,
+  
+  p_col = pt(-abs(t_score_col),df=N-1),
+  p_ind = pt(-abs(t_score_ind),df=N-1)
+)
+
+reso <- filter(worldnews_graphs, threat_level == "All Environmental Resolutions") %>% select(collective)
+ppb <- filter(worldnews_graphs, threat_level == "Person/Place/Business") %>% select(collective)
+country <- filter(worldnews_graphs, threat_level == "Country") %>% select(collective)
+reig <- filter(worldnews_graphs, threat_level == "Reigonal") %>% select(collective)
+glob <- filter(worldnews_graphs, threat_level == "Global") %>% select(collective)
+iss <- filter(worldnews_graphs, threat_level == "Inside Solar System") %>% select(collective)
+oss <- filter(worldnews_graphs, threat_level == "Outside Solar System") %>% select(collective)
+
+
+t.test(oss$collective,glob$collective, alternative =  "greater", mu = 0, 
+    paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+```
+
+
+## Score analysis by threat scale
+## POT99
+```{r}
+
+  
+  
+  worldnews_graphs <- worldnews_environment_threat_level %>% 
+  #filter(problem == "problem") %>% 
+  select(title, threat_level, problem) %>%
+  left_join(worldnews_posts,., by = c("title" = "title")) %>% 
+  select(-(score)) %>%
+  mutate(threat_level = case_when(
+    problem == "Resolution" ~ "All Environmental Resolutions",
+    !is.na(threat_level) ~ as.character(threat_level),
+     star_system == "o" ~  "Outside Solar System",
+    star_system == "i" ~  "Inside Solar System",
+               TRUE~"All Other"
+                                  ), 
+         threat_level = factor(threat_level,threat_levels2)) %>% left_join(pronoun_use_post,., by = c("title" = "title")) %>% filter(!is.na(threat_level))
+
+
+
+
+
+worldnews_graphs2 <- worldnews_graphs %>% group_by(title) %>% summarise(score_avg = mean(score)) %>% ungroup() %>% 
+ left_join(worldnews_graphs,., by = c("title" = "title")) %>% mutate(score_ratio =
+             score/(score -2*(score-score_avg))                         
+              ) %>%
+  filter(collective.x == "Contains collective")
+
+
+
+    ggplot(worldnews_graphs2,
+       aes(threat_level,score_ratio, size = num_comments.x))+ geom_boxplot(outlier.alpha = 0) + 
+  geom_jitter(width=.25,alpha = 0.2)  +
+  theme_classic() +  labs(title = "Score Ratio between comments with Collective Pronouns and Without in Posts from /r/worldnews by Scale of Threat/Resolution",
+       subtitle = "all posts from 2016 with at least 500 comments, each circle represents a post scaled by number of comments",
+       caption = "") + geom_hline(yintercept = 1) + theme_classic(base_size = 12) +xlab("") + ylab("Score ratio between comments with and without collective pronouns for each post") +scale_y_continuous(limits = c(0,4)) + theme(axis.text=element_text(size=8))
+  
+## hypothesis testing
+    worldnews_graphs2 %>%
+  group_by(problem,threat_level) %>%
+  summarise(
+    total_comments = sum(num_comments.x),
+    collective_avg = sum(collective*num_comments)/total_comments,
+    individual_avg = sum(individual*num_comments)/total_comments,
+    col_min =collective_avg + sqrt(collective_avg*(1-collective_avg)/total_comments),
+    col_max =collective_avg - sqrt(collective_avg*(1-collective_avg)/total_comments)
+  )
+  
+  
+  #only environmental
+  
+  worldnews_graphs %>% group_by(title) %>% summarise(score_avg = mean(score)) %>% ungroup() %>% 
+ left_join(worldnews_graphs,., by = c("title" = "title")) %>% mutate(score_ratio = score/score_avg) %>%
+    filter(climate_change == "related") %>%
+    ggplot(
+       aes(threat_level,score_ratio, size = num_comments.x))+ geom_boxplot(outlier.alpha = 0) + 
+  geom_jitter(width=.25,alpha = 0.2) + facet_grid(~collective.x) +
+  theme_classic() + labs(title = "Score Ratio between comments with Collective Pronouns and Without in Posts from /r/worldnews by Scale of Threat/Resolution",
+       subtitle = "all posts from 2016 with at least 500 comments, each circle represents a post scaled by number of comments",
+       caption = "") + geom_hline(yintercept = 1) + theme_classic() +xlab("") + ylab("Average score ratio between comments with and without collective pronouns") 
+  
+```
+
+#HYPOTHESIS TESTING
+```{r}
+#Score ratio
+pop_sd <- sd(worldnews_graphs2$score_ratio)
+worldnews_graphs2 %>% group_by(threat_score) %>% summarise(
+  N = n(),
+  score_ratio_avg = median(score_ratio),
+  t_score = (score_ratio_avg - 1)*sqrt(N)/pop_sd,
+  p = pt(-abs(t_score),df=N-1)
+)
+      
+```
+
 

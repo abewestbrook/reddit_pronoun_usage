@@ -162,7 +162,9 @@ reddit_comments_post_num %>%
   left_join(start_points, by = c("subreddit" = "subreddit")) %>%
   filter(post_num <50, 
         # !subreddit %in% c("chemicalreactiongifs", "vagabond", "Meditation")) %>%
-          subreddit %in% c("The_Donald", "LateStageCapitalism")) %>%
+          subreddit %in% c("The_Donald"
+                           #, "LateStageCapitalism"
+                           ) ) %>%
   arrange(sort(post_num)) %>%
   group_by(subreddit) %>%
   mutate(
@@ -183,14 +185,14 @@ geom_point(aes(y=contains_us  , color = "Us"     )) + # , size = num_authors)) +
 geom_point(aes(y=contains_they, color = "They"   )) + # , size = num_authors)) +
 geom_point(aes(y=contains_them, color = "Them"   )) + # , size = num_authors)) +
 geom_point(aes(y=contains_you , color = "You"    )) + # , size = num_authors)) +
-#geom_point(aes(y=average_use  , color = "Average")) + # , size = num_authors)) +
-geom_smooth(aes(y=contains_i   , color = "I"      ), se = TRUE) +
-geom_smooth(aes(y=contains_me  , color = "Me"     ), se = TRUE) +
-geom_smooth(aes(y=contains_we  , color = "We"     ), se = TRUE) +
-geom_smooth(aes(y=contains_us  , color = "Us"     ), se = TRUE) +
-geom_smooth(aes(y=contains_they, color = "They"   ), se = TRUE) +
-geom_smooth(aes(y=contains_them, color = "Them"   ), se = TRUE) +
-geom_smooth(aes(y=contains_you,  color = "You"    ), se = TRUE) +
+##geom_point(aes(y=average_use  , color = "Average")) + # , size = num_authors)) +
+#geom_smooth(aes(y=contains_i   , color = "I"      ), se = TRUE) +
+#geom_smooth(aes(y=contains_me  , color = "Me"     ), se = TRUE) +
+#geom_smooth(aes(y=contains_we  , color = "We"     ), se = TRUE) +
+#geom_smooth(aes(y=contains_us  , color = "Us"     ), se = TRUE) +
+#geom_smooth(aes(y=contains_they, color = "They"   ), se = TRUE) +
+#geom_smooth(aes(y=contains_them, color = "Them"   ), se = TRUE) +
+#geom_smooth(aes(y=contains_you,  color = "You"    ), se = TRUE) +
 #geom_smooth(aes(y=average_use  , color = "Average"), se = FALSE) +
   facet_wrap(~subreddit) + 
   scale_colour_manual(
@@ -208,6 +210,52 @@ geom_smooth(aes(y=contains_you,  color = "You"    ), se = TRUE) +
     values = c( #"dark gray",
                 "dark blue","light blue", "pink", "red", "light green", "dark green", "yellow"))
 ```
+
+
+Recreating above using 01_load_data load instead
+##POT1
+```{r}
+pronoun_by_post_num %>%
+  filter(subreddit %in% c("The_Donald"),
+         #topic_level1 == "News and Politics",
+         post_num < 101) %>%
+ggplot(aes(post_num)) +
+  geom_hline(yintercept = 0) + 
+geom_point(aes (y=ZNcontains_i   , color = "I"      )) + # , size = num_authors)) +
+geom_point(aes (y=ZNcontains_me  , color = "Me"     )) + # , size = num_authors)) +
+geom_point(aes (y=ZNcontains_we  , color = "We"     )) + # , size = num_authors)) +
+geom_point(aes (y=ZNcontains_us  , color = "Us"     )) + # , size = num_authors)) +
+geom_point(aes (y=ZNcontains_they, color = "They"   )) + # , size = num_authors)) +
+geom_point(aes (y=ZNcontains_them, color = "Them"   )) + # , size = num_authors)) +
+geom_point(aes (y=ZNcontains_you , color = "You"    )) + # , size = num_authors)) +
+#geom_point(aes(y=ZNaverage_use  , color = "Average")) + # , size = num_authors)) +
+geom_smooth(aes(y=ZNcontains_i   , color = "I"      ), se = TRUE) +
+geom_smooth(aes(y=ZNcontains_me  , color = "Me"     ), se = TRUE) +
+geom_smooth(aes(y=ZNcontains_we  , color = "We"     ), se = TRUE) +
+geom_smooth(aes(y=ZNcontains_us  , color = "Us"     ), se = TRUE) +
+geom_smooth(aes(y=ZNcontains_they, color = "They"   ), se = TRUE) +
+geom_smooth(aes(y=ZNcontains_them, color = "Them"   ), se = TRUE) +
+geom_smooth(aes(y=ZNcontains_you,  color = "You"    ), se = TRUE) +
+#geom_smooth(aes(y=average_use  , color = "Average"), se = FALSE) +
+  #facet_wrap(~topic_level2) + 
+  scale_colour_manual(
+    "",
+    breaks = c(
+      #"Average",
+      "I"      ,
+      "Me"     ,
+      "Them"   ,
+      "They"   ,
+      "Us"     ,
+      "We"     ,
+      "You"
+    ),
+    values = c( #"dark gray",
+                "dark blue","light blue", "pink", "red", "light green", "dark green", "yellow"))+
+  scale_y_continuous(limits = c(-15,15))
+```
+
+
 Single pronoun
 
 ```{r}
@@ -486,7 +534,7 @@ n50_pronoun_change <- pronoun_by_post_num %>%
     n50_them        = mean(ZNcontains_them, na.rm = TRUE),
     n50_you         = mean(ZNcontains_you , na.rm = TRUE),
     n50_author      = mean(num_authors    , na.rm = TRUE)
-  )  %>% ungroup()
+  )  %>% ungroup() 
 agg_n50_pronoun_change  <- pronoun_by_post_num %>%
   filter(post_num == 50) %>%
   left_join(n50_pronoun_change, by = c("subreddit"="subreddit")) %>%
@@ -510,7 +558,7 @@ agg_n50_pronoun_change  <- pronoun_by_post_num %>%
     agg_offset_they   =  sum(n50_author*offset_they)/agg_n50_author,
     agg_offset_them   =  sum(n50_author*offset_them)/agg_n50_author,
     agg_offset_you    =  sum(n50_author*offset_you )/agg_n50_author
-  ) %>% filter(grepl("Lifestyle", all_topics)) #########HERE
+  ) %>% filter(grepl("News", all_topics)) #########HERE
 
 library(plotly)
 
@@ -559,25 +607,152 @@ ggplot(aes(n50_author,n50_i)) +
 ```
 
 ##Hypothesis Test of I/We chage
+
+```{r}
+n50_pronoun_change <- pronoun_by_post_num %>%
+  filter(num_authors > 60,post_num > 49) %>%
+  group_by(subreddit) %>%
+  summarise(
+    n50_i           = mean(ZNcontains_i   ,na.rm = TRUE),
+    n50_me          = mean(ZNcontains_me  ,na.rm = TRUE),
+    n50_we          = mean(ZNcontains_we  ,na.rm = TRUE),
+    n50_us          = mean(ZNcontains_us  ,na.rm = TRUE),
+    n50_they        = mean(ZNcontains_they,na.rm = TRUE),
+    n50_them        = mean(ZNcontains_them,na.rm = TRUE),
+    n50_you         = mean(ZNcontains_you ,na.rm = TRUE),
+    n50_author      = mean(num_authors    ,na.rm = TRUE)
+  )  %>% ungroup()
+n50_pronoun_change  <- pronoun_by_post_num %>%
+  filter(post_num == 50) %>%
+  left_join(n50_pronoun_change, by = c("subreddit"="subreddit")) %>%
+  left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit"))
+  ungroup() #%>% filter(grepl("Politic", all_topics))
+```
+
+
 ```{r}
 n50_pronoun_change %>%
   ggplot()+
-  stat_ecdf(aes(n50_i))+
+  stat_density(aes(n50_i))+
   scale_x_continuous(limits = c(-50,50))
 
 
 n50_pronoun_change %>%
+  left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit")) %>%
+  filter(grepl("Sports", topic_level1)) %>%
   ggplot()+
-  stat_ecdf(aes(n50_we))+
-  scale_x_continuous(limits = c(-75,150))
+  geom_density(aes(n50_i ,color = "I"))+
+  geom_density(aes(n50_me,color = "Me"))+
+  geom_density(aes(n50_we,color = "We"))+
+  geom_density(aes(n50_us,color = "Us"))+
+  geom_density(aes(n50_they,color = "They"))+
+  geom_density(aes(n50_them,color = "Them"))+
+  geom_density(aes(n50_you,color = "You"))+
+  scale_x_continuous(name = "Average Change in Pronoun Use after 50 comments", limits = c(-75,150))
 
-n50_pronoun_change %>%
+geom_density(aes(n50_we,color = "We"))+n50_pronoun_change %>%
   filter(n50_i<100,n50_i>-100)%>%
   ggplot(aes(n50_i,n50_we))+
   geom_point()+
   geom_smooth()
 ```
 
+## FINAL 1
+##aggregate by post num
+```{r}
+library(reshape2)
+pronoun_by_post_num %>%
+  filter(
+    offset_i   != 0,
+    offset_me  != 0,
+    offset_we  != 0,
+    offset_us  != 0,
+   offset_they != 0,
+   offset_them != 0,
+    offset_you != 0
+         ) %>%
+ # %>% filter(grepl("Lifestyle", all_topics)) #########HERE
+group_by(post_num) %>% 
+  summarise(
+    #agg_author = sum(num_authors),
+    i      = sum(num_authors*ZNcontains_i     )/sum(num_authors),
+    me     = sum(num_authors*ZNcontains_me    )/sum(num_authors),
+    we     = sum(num_authors*ZNcontains_we    )/sum(num_authors),
+    us     = sum(num_authors*ZNcontains_us    )/sum(num_authors),
+    they   = sum(num_authors*ZNcontains_they  )/sum(num_authors),
+    them   = sum(num_authors*ZNcontains_them  )/sum(num_authors),
+    you    = sum(num_authors*ZNcontains_you   )/sum(num_authors)
+    
+   #agg_offset_i      =  sum(num_authors*offset_i   )/agg_author,
+   #agg_offset_me     =  sum(num_authors*offset_me  )/agg_author,
+   #agg_offset_we     =  sum(num_authors*offset_we  )/agg_author,
+   #agg_offset_us     =  sum(num_authors*offset_us  )/agg_author,
+   #agg_offset_they   =  sum(num_authors*offset_they)/agg_author,
+   #agg_offset_them   =  sum(num_authors*offset_them)/agg_author,
+   #agg_offset_you    =  sum(num_authors*offset_you )/agg_author
+  ) %>%
+  filter(post_num<100) %>%
+  melt(., id.vars="post_num") %>%
+  mutate(pronoun = variable) %>%
+  ggplot(aes(post_num,value, col=pronoun)) + 
+  geom_hline(yintercept = 0) +
+  geom_point() + theme_classic(base_size = 16) +
+   labs(title = "Pronoun Use as a User becomes More Involved in a Subreddit" ,
+       subtitle = "Comments Grouped by Number of Comments in a subreddit and Normalized based on pronoun use of 1st comment in subreddit\nIncludes all comments from all subreddits where the author has at least 50 comments in that subreddit",
+       caption = "") + xlab("Average of all authors' Nth comment in subreddit X") + ylab("Percentage change in the proportion of comments with pronoun\n (compared to first comment in subreddit)") + scale_y_continuous(breaks = c(-10,-5,0,5))
+```
+##POT4
+```{r}
+library(reshape2)
+
+all_posts_agg_topic <- pronoun_by_post_num %>%
+  filter(
+    offset_i   != 0,
+    offset_me  != 0,
+    offset_we  != 0,
+    offset_us  != 0,
+   offset_they != 0,
+   offset_them != 0,
+    offset_you != 0
+         ) %>%
+ # %>% filter(grepl("Lifestyle", all_topics)) #########HERE
+group_by(post_num,topic_level1) %>% 
+  summarise(
+    #agg_author = sum(num_authors),
+    agg_i      = sum(num_authors*ZNcontains_i     )/sum(num_authors),
+    agg_me     = sum(num_authors*ZNcontains_me    )/sum(num_authors),
+    agg_we     = sum(num_authors*ZNcontains_we    )/sum(num_authors),
+    agg_us     = sum(num_authors*ZNcontains_us    )/sum(num_authors),
+    agg_they   = sum(num_authors*ZNcontains_they  )/sum(num_authors),
+    agg_them   = sum(num_authors*ZNcontains_them  )/sum(num_authors),
+    agg_you    = sum(num_authors*ZNcontains_you   )/sum(num_authors)
+    
+   #agg_offset_i      =  sum(num_authors*offset_i   )/agg_author,
+   #agg_offset_me     =  sum(num_authors*offset_me  )/agg_author,
+   #agg_offset_we     =  sum(num_authors*offset_we  )/agg_author,
+   #agg_offset_us     =  sum(num_authors*offset_us  )/agg_author,
+   #agg_offset_they   =  sum(num_authors*offset_they)/agg_author,
+   #agg_offset_them   =  sum(num_authors*offset_them)/agg_author,
+   #agg_offset_you    =  sum(num_authors*offset_you )/agg_author
+  )
+
+  
+all_posts_agg_topic %>%
+  filter(post_num<100) %>%
+  filter(!topic_level1 %in% c("Adult and NSFW","Architecture","Art"),
+         !is.na(topic_level1)) %>%
+  ggplot(aes(post_num))+
+  geom_hline(yintercept = 0) + 
+   geom_point(aes(y=agg_i,color = "I")) + 
+  stat_smooth(aes(y=agg_i,color = "I")) +
+   geom_point(aes(y=agg_we,color = "We")) +
+  stat_smooth(aes(y=agg_we,color = "We")) +
+  scale_y_continuous(limits = c(-25,25))+
+   theme_classic(base_size = 16) +
+   labs(title = "Pronoun Use as a User becomes More Involved in a Subreddit" ,
+       subtitle = "Comments Grouped by Number of Comments in a subreddit and Normalizaed based on pronoun use of 1st comment in subreddit\nIncludes all comments from all subreddits where the author has at least 50 comments in that subreddit",
+       caption = "") + xlab("Average of all authors' Nth comment in subreddit X") + ylab("Percentage change in the proportion of comments with pronoun\n (compared to first comment in subreddit)") + scale_y_continuous() + facet_wrap(~topic_level1)
+```
 
 
 

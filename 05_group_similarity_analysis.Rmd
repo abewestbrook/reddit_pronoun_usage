@@ -17,3 +17,89 @@ donald_tfidf %>%
   ) %>% arrange(desc(tf))
 ```
 
+#Authors who have posted in T_D
+
+```{r}
+posts_in_donald %>%
+  mutate(score_over_25 = ifelse(score > 25, 1, 0)) %>%
+  group_by(author) %>%
+  summarise(
+    num_posts = n(),
+    num_over_25 = sum(score_over_25),
+    total_score = sum(score),
+    total_comments = sum(num_comments)
+    
+  ) %>%
+  left_join(pronoun_use_donald_authors, by = c("author" = "author")) %>%
+  ggplot() +
+  stat_ecdf(aes(num_over_25, name = "over25")) +
+  stat_ecdf(aes(num_posts, name = "all")) +
+  scale_x_continuous(limits = c(0,40))
+  
+```
+#number of post vs. collective use by author
+```{r}
+posts_in_donald %>%
+  mutate(score_over_25 = ifelse(score > 25, 1, 0)) %>%
+  group_by(author) %>%
+  summarise(
+    num_posts      = n(),
+    num_over_25    = sum(score_over_25),
+    total_score    = sum(score),
+    total_comments = sum(num_comments)
+    
+  ) %>%
+  left_join(pronoun_use_donald_authors, by = c("author" = "author")) %>%
+  filter(!is.na(collective)) %>%
+  group_by(num_posts) %>%
+  summarise(collective = sum(num_comments*collective)/sum(num_comments)) %>%
+  ggplot() +
+  geom_point(aes(num_posts,collective)) + scale_x_continuous(limits = c(0,200))
+
+
+```
+#Those who have vs. those who havent posted
+
+```{r}
+posts_in_donald %>%
+  mutate(score_over_25 = ifelse(score > 25, 1, 0)) %>%
+  group_by(author) %>%
+  summarise(
+    num_posts      = n(),
+    num_over_25    = sum(score_over_25),
+    total_score    = sum(score),
+    total_comments = sum(num_comments)
+    
+  ) %>%
+  left_join(pronoun_use_donald_authors,., by = c("author" = "author")) %>%
+  mutate(
+    num_posts      = ifelse(is.na(num_posts     ),0,num_posts     ),
+    num_over_25    = ifelse(is.na(num_over_25   ),0,num_over_25   ),
+    total_score    = ifelse(is.na(total_score   ),0,total_score   ),
+    total_comments = ifelse(is.na(total_comments),0,total_comments),
+    posted = ifelse(num_posts == 0, "no", "yes")
+  ) %>%
+  #ggplot() + geom_density()
+  filter(num_comments > 10, num_comments < 500) %>%
+  group_by(posted) %>%
+  summarise(
+    num_people = n(),
+    total_num_comments  = sum(num_comments),
+    collective = sum(num_comments*collective)/sum(num_comments)) 
+
+
+```
+
+collective by num of comments 
+```{r}
+pronoun_use_donald_authors %>%
+  group_by(num_comments) %>%
+  summarise(collective = mean(collective)) %>%
+  ggplot() + geom_point(aes(num_comments,collective)) +
+  scale_x_continuous(limits = c(0,200)) +
+  scale_y_continuous(limits = c(.1,.15))
+```
+
+
+
+

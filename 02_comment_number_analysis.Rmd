@@ -16,9 +16,9 @@ pronoun_by_post_num %>%
     agg_they   = sum(num_authors*contains_they  )/sum(num_authors),
     agg_them   = sum(num_authors*contains_them  )/sum(num_authors),
     agg_you    = sum(num_authors*contains_you   )/sum(num_authors)
-  ) %>%
+  ) %>% filter(post_num<52)%>%
 ggplot() +
-  geom_point(aes(post_num,agg_i,color=total_num_com_in_sub))
+  geom_point(aes(post_num,agg_you,color=total_num_com_in_sub))
   #facet_wrap(~topic_level1)
 ```
 ##Super Grouped results
@@ -33,7 +33,7 @@ mutate(
 library(plotly)
 
 ggplotly(
-ggplot(filter(all_pronouns, num_til_quit < 10), aes(post_num,contains_me,group=num_til_quit, color = num_til_quit)) +
+ggplot(filter(all_pronouns, num_til_quit < 10), aes(post_num,contains_you,group=num_til_quit, color = num_til_quit)) +
   #geom_point()+
   geom_smooth(se = FALSE)
 )
@@ -62,6 +62,30 @@ ggplot(filter(all_pronouns,total_num_com_in_sub < 500, post_num < 200)) +
   filter(all_pronouns,total_num_com_in_sub < 500, post_num < 1000, num_til_quit < 300) %>%
   plot_ly(x=.$post_num, z=.$contains_we, y=.$num_til_quit, type="scatter3d", mode="markers", color = .$contains_we)
 ```
+##FINAL 3
+```{r}
+all_pronouns <- pronoun_by_post_num %>%
+#filter(post_num > 0, total_num_com_in_sub > 100), 
+mutate(
+  num_til_quit = (total_num_com_in_sub - post_num)
+) %>% filter(num_til_quit < 5) %>% mutate(num_til_quit = as.character(num_til_quit), contains_wepct = contains_we*100)
+
+ggplot(all_pronouns)+
+  geom_point(aes(num_til_quit,contains_we,color = total_num_com_in_sub))
+
+  library(RColorBrewer)
+#ggplotly(
+ggplot(filter(all_pronouns,  post_num>5), aes(post_num,contains_wepct,group=num_til_quit, color = num_til_quit)) +
+  geom_point()+
+  geom_smooth(se=FALSE)+ theme_classic(base_size = 15) +
+   labs(title = "Collective Pronoun Use in Users' last 5 Comments in a Subreddit" ,
+       subtitle = "Comments Grouped by Total Number of Comments in a Subreddit and Remaining Number of comments until last comment\nIncludes all comments from all subreddits where the author has at least 5 comments in that subreddit",
+       caption = "") + xlab("Average of all authors' Nth comment in subreddit X") + ylab("Percentage of comments which contain 'We'") +
+       scale_color_brewer(palette="Paired")
+#)
+ggsave("final3.png")
+```
+
 
 
 

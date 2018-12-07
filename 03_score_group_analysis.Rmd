@@ -92,3 +92,144 @@ plot_categories_score_groups(agg_pronoun_use,"You")
 
 ```
 
+
+
+## Analysis by score (not group)
+
+#Base rates across subreddits
+
+
+```{r}
+pronoun_source <- collective_pronoun_by_score %>%
+  filter(score < 50) #%>%
+  #filter(grepl("Lifestyle", all_topics)) 
+
+#for pronoun in c("individual", "collective")
+ggplotly(
+  ggplot(pronoun_source, aes_string(x = "score", y = "ZNcollective",
+                                                 name = "subreddit")) + geom_smooth(aes(size = num_comments))
+  )
+
+ggplotly(
+  ggplot(pronoun_source, aes_string(x = "score", y = "ZNindividual",
+                                                 name = "subreddit", color = "all_topics")) + geom_smooth(aes(size = num_comments))
+  )
+```
+
+large subs
+
+```{r}
+large_subreddits <- collective_pronoun_by_score %>%
+  filter(
+    score >1000, num_comments > 10
+  ) %>% select(subreddit)
+large_subreddits <- large_subreddits[,1,drop = TRUE]
+
+```
+
+
+##POT6
+```{r}
+collective_pronoun_by_score %>%
+  filter(subreddit %in% large_subreddits) %>%
+  #filter(grepl("Soccer", all_topics)) %>%
+  filter(score<25) %>%
+  filter(!topic_level1 %in% c("Adult and NSFW","Architecture","Art"),
+         !is.na(topic_level1)) %>%
+  group_by(score
+           ,topic_level1
+           ) %>%
+  summarise(
+    collective = sum(ZNcollective*num_comments)/sum(num_comments),
+    individual = sum(ZNindividual*num_comments)/sum(num_comments),
+    num_comments = sum(num_comments)
+  ) %>% 
+  ggplot()+ geom_hline(yintercept = 0) + geom_vline(xintercept = 1) +
+  geom_point(aes(score,collective,color = "collective",size = num_comments))+
+  geom_point(aes(score,individual,color = "individual",size = num_comments))+
+  theme_classic() +
+  facet_wrap(~topic_level1) +
+  scale_y_continuous(limits = c(-20,50))+
+  labs(title = "Pronoun Use by Score of the Comment in Different Categories of Subreddits" ,
+       subtitle = "Pronoun use normalized based on comments with score 1",
+       caption = "") + xlab("Comment Score") + ylab("Percentage change in the proportion of comments with pronoun\n (compared to comments with score 1)") 
+
+collective_pronoun_by_score %>%
+  filter(subreddit %in% large_subreddits) %>%
+  #filter(grepl("Soccer", all_topics)) %>%
+  filter(score<25) %>%
+  filter(!topic_level1 %in% c("Adult and NSFW","Architecture","Art"),
+         !is.na(topic_level1)) %>%
+  group_by(score
+           #,topic_level1
+           ) %>%
+  summarise(
+    collective = sum(ZNcollective*num_comments)/sum(num_comments),
+    individual = sum(ZNindividual*num_comments)/sum(num_comments),
+    num_comments = sum(num_comments)
+  ) %>% 
+  ggplot()+ geom_hline(yintercept = 0) + geom_vline(xintercept = 1) +
+  geom_point(aes(score,collective,color = "collective",size = num_comments))+
+  geom_point(aes(score,individual,color = "individual",size = num_comments))+
+  theme_classic() +
+  #facet_wrap(~topic_level1) +
+  scale_y_continuous(limits = c(-20,50))#+
+ # scale_x_log10()
+
+
+#worldnews
+
+collective_pronoun_by_score %>%
+  filter(subreddit == "worldnews") %>%
+  #filter(grepl("Soccer", all_topics)) %>%
+  filter(score<25) %>%
+  filter(!topic_level1 %in% c("Adult and NSFW","Architecture","Art"),
+         !is.na(topic_level1)) %>%
+  group_by(score
+           #,topic_level1
+           ) %>%
+  summarise(
+    collective = sum(ZNcollective*num_comments)/sum(num_comments),
+    individual = sum(ZNindividual*num_comments)/sum(num_comments),
+    num_comments = sum(num_comments)
+  ) %>% 
+  ggplot()+ geom_hline(yintercept = 0) + geom_vline(xintercept = 1) +
+  geom_point(aes(score,collective,color = "collective",size = num_comments))+
+  geom_point(aes(score,individual,color = "individual",size = num_comments))+
+  theme_classic() +
+  #facet_wrap(~topic_level1) +
+  scale_y_continuous(limits = c(-20,50))#+
+```
+
+```{r}
+weird <- scales::trans_new("signed_log",
+       transform=function(x) sign(x)*log(abs(x)),
+       inverse=function(x) sign(x)*exp(abs(x)))
+
+collective_pronoun_by_score %>%
+  #filter(grepl("Sports", all_topics)) %>%
+  filter(score<100, score > 0)%>%
+  filter(!topic_level1 %in% c("Adult and NSFW","Architecture","Art"),
+         !is.na(topic_level1)) %>%
+  group_by(score
+           #, topic_level1
+           )%>%
+  summarise(
+    num_comments = sum(num_comments)
+    
+    
+  ) %>%
+  ggplot()+ 
+  geom_point(aes(score,num_comments))+ scale_y_log10(name = "Number of comments per score (log10 scale)" ,breaks = c(1000000,10000000,100000000,1000000000),labels = scales::comma)+ scale_x_continuous(trans = weird, name = "Score (log10 scale)",breaks = c(1,5,10,25,50,75,100),labels = scales::comma) + theme_linedraw()
+```
+Size of subreddit vs. score-pronoun relation
+
+```{r}
+
+collective_pronoun_by_score %>%
+  filter(score == 50) %>%
+  ggplot(aes(num_comments,ZNcollective))+geom_point()+
+  #geom_smooth()+
+  scale_x_log10()+scale_y_continuous(limits = c(-100,250))+ facet_wrap(~ topic_level1)
+```
+

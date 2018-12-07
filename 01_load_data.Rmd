@@ -349,7 +349,7 @@ pronoun_use_by_score_group <- query_exec(sql, project = project_id, max_pages = 
 
 ```{r}
 library(tidyverse)
-collective_pronoun_by_score <- read_csv("collective_pronoun_by_score.csv") %>%
+collective_pronoun_by_score <- read_csv("pronoun_use_by_score_group_collective.csv") %>%
   left_join(read_csv("subreddit_categories.csv"), by = c("subreddit" = "subreddit")) %>%
   mutate(all_topics = paste(topic_level1,coalesce(topic_level2,""),coalesce(topic_level3,""),sep="-"))
 
@@ -517,6 +517,13 @@ posts_in_political_subs <- read_csv("posts_in_political_subs.csv")
 pronoun_use_by_political_posts <- read_csv("pronoun_use_by_political_posts.csv", 
     col_types = cols(collective = col_double(), 
         contains_we = col_double()))
+```
+
+
+```{r}
+pronoun_use_by_worldnews2016_posts <- read_csv("pronoun_use_by_worldnews2016_posts.csv") 
+  
+
 ```
 
 
